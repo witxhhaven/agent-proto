@@ -84,7 +84,7 @@ export default function ScheduleDetailPage({
     notifications.show({
       title: "Saved",
       message: "Schedule updated.",
-      color: "indigo",
+      color: "brand-blue",
     });
   }
 

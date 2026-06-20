@@ -73,10 +73,10 @@ export function IntakeQuestionCard({
                 style={{
                   borderRadius: 8,
                   border: active
-                    ? "2px solid var(--mantine-color-indigo-5)"
+                    ? "2px solid var(--mantine-color-brand-blue-5)"
                     : "1px solid var(--mantine-color-gray-3)",
                   background: active
-                    ? "var(--mantine-color-indigo-0)"
+                    ? "var(--mantine-color-brand-blue-0)"
                     : undefined,
                 }}
               >
@@ -91,7 +91,7 @@ export function IntakeQuestionCard({
                       </Text>
                     )}
                   </Stack>
-                  {active && <IconCheck size={16} color="var(--mantine-color-indigo-6)" />}
+                  {active && <IconCheck size={16} color="var(--mantine-color-brand-blue-6)" />}
                 </Group>
               </UnstyledButton>
             );

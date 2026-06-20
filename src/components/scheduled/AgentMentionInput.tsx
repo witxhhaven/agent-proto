@@ -88,7 +88,7 @@ export function AgentMentionInput({
                   py={2}
                   wrap="nowrap"
                   style={{
-                    background: "var(--mantine-color-indigo-0)",
+                    background: "var(--mantine-color-brand-blue-0)",
                     borderRadius: 999,
                   }}
                 >

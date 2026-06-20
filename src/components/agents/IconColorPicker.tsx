@@ -1,6 +1,6 @@
 "use client";
 
-import { Group, Stack, Text, UnstyledButton } from "@mantine/core";
+import { Group, Stack, Text, TextInput, UnstyledButton } from "@mantine/core";
 import { ICON_PRESETS, COLOR_PRESETS } from "@/data/presets";
 import { resolveIcon } from "@/components/common/iconMap";
 import { AgentAvatar } from "@/components/common/AgentAvatar";
@@ -8,24 +8,44 @@ import { AgentAvatar } from "@/components/common/AgentAvatar";
 export interface IconColorPickerProps {
   iconName: string;
   bgColor: string;
-  onChange: (patch: { iconName?: string; bgColor?: string }) => void;
+  imageUrl?: string;
+  onChange: (patch: {
+    iconName?: string;
+    bgColor?: string;
+    imageUrl?: string;
+  }) => void;
 }
 
 export function IconColorPicker({
   iconName,
   bgColor,
+  imageUrl,
   onChange,
 }: IconColorPickerProps) {
   return (
     <Group align="flex-start" gap="xl" wrap="nowrap">
       <Stack align="center" gap={4}>
-        <AgentAvatar iconName={iconName} bgColor={bgColor} size={56} />
+        <AgentAvatar
+          iconName={iconName}
+          bgColor={bgColor}
+          imageUrl={imageUrl}
+          size={56}
+        />
         <Text size="xs" c="dimmed">
           Preview
         </Text>
       </Stack>
 
       <Stack gap="md" style={{ flex: 1 }}>
+        <TextInput
+          label="Avatar image URL (optional)"
+          description="Drop a file in public/avatars/ then use e.g. /avatars/my-agent.png. Overrides the icon."
+          placeholder="/avatars/my-agent.png"
+          value={imageUrl ?? ""}
+          onChange={(e) =>
+            onChange({ imageUrl: e.currentTarget.value || undefined })
+          }
+        />
         <Stack gap={6}>
           <Text size="sm" fw={500}>
             Icon
@@ -46,7 +66,7 @@ export function IconColorPicker({
                     display: "grid",
                     placeItems: "center",
                     border: selected
-                      ? "2px solid var(--mantine-color-indigo-5)"
+                      ? "2px solid var(--mantine-color-brand-blue-5)"
                       : "1px solid var(--mantine-color-gray-3)",
                   }}
                 >
@@ -75,7 +95,7 @@ export function IconColorPicker({
                     borderRadius: 999,
                     background: color,
                     outline: selected
-                      ? "2px solid var(--mantine-color-indigo-5)"
+                      ? "2px solid var(--mantine-color-brand-blue-5)"
                       : "none",
                     outlineOffset: 2,
                   }}

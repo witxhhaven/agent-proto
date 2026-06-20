@@ -103,6 +103,7 @@ export function ChatView({ chatId }: { chatId: string }) {
             <AgentAvatar
               iconName={agent.iconName}
               bgColor={agent.bgColor}
+              imageUrl={agent.imageUrl}
               size={32}
             />
           ) : null}
@@ -150,8 +151,8 @@ function MessageRow({ message }: { message: Message }) {
   }
   if (message.kind === "intake-summary") {
     return (
-      <Paper withBorder p="sm" radius="md" bg="indigo.0" maw={560}>
-        <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
+      <Paper withBorder p="sm" radius="md" bg="brand-blue.0" maw={560}>
+        <Text size="md" style={{ whiteSpace: "pre-wrap" }}>
           {message.content}
         </Text>
       </Paper>
@@ -160,8 +161,8 @@ function MessageRow({ message }: { message: Message }) {
   if (message.role === "user") {
     return (
       <Group justify="flex-end">
-        <Paper withBorder p="xs" radius="md" bg="indigo.0" maw="80%">
-          <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
+        <Paper withBorder p="sm" radius="md" bg="brand-blue.0" maw={640}>
+          <Text size="md" style={{ whiteSpace: "pre-wrap" }}>
             {message.content}
           </Text>
         </Paper>
@@ -174,8 +175,8 @@ function MessageRow({ message }: { message: Message }) {
 function BubbleAssistant({ text }: { text: string }) {
   return (
     <Group justify="flex-start">
-      <Paper withBorder p="xs" radius="md" maw="80%">
-        <Text size="sm" style={{ whiteSpace: "pre-wrap" }}>
+      <Paper withBorder p="sm" radius="md" maw={640}>
+        <Text size="md" style={{ whiteSpace: "pre-wrap" }}>
           {text}
         </Text>
       </Paper>

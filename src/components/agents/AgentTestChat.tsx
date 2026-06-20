@@ -119,7 +119,7 @@ export function AgentTestChat({
               p="xs"
               radius="md"
               maw="80%"
-              bg={m.role === "user" ? "indigo.0" : undefined}
+              bg={m.role === "user" ? "brand-blue.0" : undefined}
             >
               <Text size="sm">{m.text}</Text>
             </Paper>

@@ -37,7 +37,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
         <Sidebar collapsed={collapsed} onToggle={() => setCollapsed((c) => !c)} />
       </AppShell.Navbar>
 
-      <AppShell.Main>{children}</AppShell.Main>
+      <AppShell.Main className="app-main">{children}</AppShell.Main>
     </AppShell>
   );
 }

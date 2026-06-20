@@ -80,7 +80,7 @@ export function Sidebar({
     notifications.show({
       title: "Demo data reset",
       message: "All agents, schedules, and chats were restored to seed data.",
-      color: "indigo",
+      color: "brand-blue",
     });
     router.push("/");
   }
@@ -98,7 +98,7 @@ export function Sidebar({
             <Text fw={800} size="md">
               Desk
             </Text>
-            <Badge size="xs" variant="light" color="indigo" radius="sm">
+            <Badge size="xs" variant="light" color="brand-blue" radius="sm">
               BETA
             </Badge>
           </Group>
@@ -207,7 +207,12 @@ export function Sidebar({
                 key={a.id}
                 label={a.name}
                 leftSection={
-                  <AgentAvatar iconName={a.iconName} bgColor={a.bgColor} size={22} />
+                  <AgentAvatar
+                    iconName={a.iconName}
+                    bgColor={a.bgColor}
+                    imageUrl={a.imageUrl}
+                    size={22}
+                  />
                 }
                 onClick={() => startChatWith(a.id, a.name)}
               />

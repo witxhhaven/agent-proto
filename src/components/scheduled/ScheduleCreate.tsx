@@ -66,7 +66,7 @@ export function ScheduleCreate({
       notifications.show({
         title: extracted.isSchedule ? "Draft ready" : "Filled from text",
         message: "Review the schedule below, then save.",
-        color: "indigo",
+        color: "brand-blue",
       });
     } finally {
       setAiLoading(false);
@@ -109,7 +109,7 @@ export function ScheduleCreate({
     notifications.show({
       title: "Schedule created",
       message: `${task.title} is now scheduled.`,
-      color: "indigo",
+      color: "brand-blue",
     });
     onClose();
   }
@@ -154,7 +154,7 @@ export function ScheduleCreate({
         <ScheduleForm value={draft} onChange={setDraft} />
 
         {testResponse && (
-          <Alert color="indigo" variant="light" title="Test response (not saved)">
+          <Alert color="brand-blue" variant="light" title="Test response (not saved)">
             {testResponse}
           </Alert>
         )}

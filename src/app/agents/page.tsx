@@ -125,6 +125,7 @@ export default function AgentsPage() {
                         <AgentAvatar
                           iconName={agent.iconName}
                           bgColor={agent.bgColor}
+                          imageUrl={agent.imageUrl}
                           size={44}
                         />
                         <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>

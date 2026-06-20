@@ -44,6 +44,7 @@ export interface AgentDraftState {
   description: string;
   iconName: string;
   bgColor: string;
+  imageUrl?: string;
   instructions: string;
   knowledgeBase: KnowledgeBase;
   toolIds: string[];
@@ -58,6 +59,7 @@ export function emptyDraft(): AgentDraftState {
     description: "",
     iconName: "IconRobot",
     bgColor: "#4F46E5",
+    imageUrl: undefined,
     instructions: "",
     knowledgeBase: { files: [], links: [], snippets: [] },
     toolIds: [],
@@ -73,6 +75,7 @@ export function draftFromAgent(agent: Agent): AgentDraftState {
     description: agent.description,
     iconName: agent.iconName,
     bgColor: agent.bgColor,
+    imageUrl: agent.imageUrl,
     instructions: agent.instructions,
     knowledgeBase: agent.knowledgeBase,
     toolIds: agent.toolIds,
@@ -112,7 +115,7 @@ export function AgentEditor({
     notifications.show({
       title: "Draft applied",
       message: "The AI suggestions were merged into the form.",
-      color: "indigo",
+      color: "brand-blue",
     });
   }
 
@@ -138,6 +141,7 @@ export function AgentEditor({
       description: draft.description.trim() || "A custom agent.",
       iconName: draft.iconName,
       bgColor: draft.bgColor,
+      imageUrl: draft.imageUrl,
       instructions: draft.instructions,
       knowledgeBase: draft.knowledgeBase,
       toolIds: draft.toolIds,
@@ -152,7 +156,7 @@ export function AgentEditor({
     notifications.show({
       title: isNew ? "Agent published" : "Agent updated",
       message: `${payload.name} is live in My Agents and the Agent Marketplace.`,
-      color: "indigo",
+      color: "brand-blue",
     });
     router.push("/agents");
   }
@@ -176,7 +180,12 @@ export function AgentEditor({
           >
             <IconArrowLeft size={18} />
           </ActionIcon>
-          <AgentAvatar iconName={draft.iconName} bgColor={draft.bgColor} size={28} />
+          <AgentAvatar
+            iconName={draft.iconName}
+            bgColor={draft.bgColor}
+            imageUrl={draft.imageUrl}
+            size={28}
+          />
           <Text fw={600} lineClamp={1}>
             {draft.name.trim() || "Untitled Agent"}
           </Text>
@@ -185,7 +194,7 @@ export function AgentEditor({
           <Tooltip label="AI assist">
             <ActionIcon
               variant="subtle"
-              color="indigo"
+              color="brand-blue"
               onClick={openAssist}
               aria-label="AI assist"
             >
@@ -220,7 +229,7 @@ export function AgentEditor({
               {isNew && draft.templateId === "scratch" && (
                 <Card withBorder radius="md" padding="lg" bg="gray.0">
                   <Group align="flex-start" gap="md" wrap="nowrap">
-                    <ThemeIcon variant="light" size={48} radius="md" color="indigo">
+                    <ThemeIcon variant="light" size={48} radius="md" color="brand-blue">
                       <IconCustom size={26} />
                     </ThemeIcon>
                     <Stack gap={2}>
@@ -246,6 +255,7 @@ export function AgentEditor({
                 <IconColorPicker
                   iconName={draft.iconName}
                   bgColor={draft.bgColor}
+                  imageUrl={draft.imageUrl}
                   onChange={(p) => patch(p)}
                 />
               </Field>

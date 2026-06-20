@@ -36,6 +36,7 @@ export function deriveAssistant(agent: Agent): Assistant {
     tags: [],
     iconName: agent.iconName,
     bgColor: agent.bgColor,
+    imageUrl: agent.imageUrl,
     uses: 0,
     type: "Developer",
     classification: "CCE/SN",
@@ -169,6 +170,7 @@ export const actions = {
                 description: updated.description,
                 iconName: updated.iconName,
                 bgColor: updated.bgColor,
+                imageUrl: updated.imageUrl,
               }
             : as
         )

@@ -50,7 +50,7 @@ export function ScheduleCard({
   return (
     <Card withBorder radius="md" padding={compact ? "sm" : "md"}>
       <Group wrap="nowrap" align="flex-start" gap="md">
-        <ThemeIcon variant="light" color="indigo" radius="xl" size={40}>
+        <ThemeIcon variant="light" color="brand-blue" radius="xl" size={40}>
           <IconHistory size={20} />
         </ThemeIcon>
 

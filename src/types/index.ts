@@ -24,6 +24,7 @@ export interface Assistant {
   tags: string[];
   iconName: string; // @tabler/icons-react name (resolved via iconMap)
   bgColor: string; // hex; avatar background
+  imageUrl?: string; // optional avatar image (e.g. "/avatars/foo.png"); overrides the icon
   uses: number;
   type: "Official" | "Community" | "Developer";
   classification?: DataClassification; // cosmetic badge on cards; default "CCE/SN"
@@ -105,6 +106,7 @@ export interface Agent {
   description: string;
   iconName: string; // avatar icon
   bgColor: string; // avatar background color (hex)
+  imageUrl?: string; // optional avatar image (e.g. "/avatars/foo.png"); overrides the icon
   instructions: string;
   knowledgeBase: KnowledgeBase;
   toolIds: string[]; // selected McpTool ids

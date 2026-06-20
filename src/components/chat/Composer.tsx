@@ -90,7 +90,7 @@ export function Composer({
               <Menu.Target>
                 <Button
                   variant="light"
-                  color="indigo"
+                  color="brand-blue"
                   size="xs"
                   radius="sm"
                   leftSection={<IconShieldCheck size={14} />}

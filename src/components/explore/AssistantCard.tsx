@@ -26,10 +26,11 @@ export function AssistantCard({ assistant }: { assistant: Assistant }) {
           <AgentAvatar
             iconName={assistant.iconName}
             bgColor={assistant.bgColor}
+            imageUrl={assistant.imageUrl}
             size={40}
           />
           <Group gap={6} wrap="nowrap">
-            <Badge variant="light" color="indigo" size="sm" radius="sm">
+            <Badge variant="light" color="brand-blue" size="sm" radius="sm">
               {assistant.classification ?? "CCE/SN"}
             </Badge>
             <ActionIcon

@@ -7,3 +7,31 @@ body {
 * {
   box-sizing: border-box;
 }
+
+/* Canvas + ink anchors from DESIGN-temp.md. */
+body {
+  background-color: #ffffff;
+  color: #0a0a0a;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  /* Plex Sans reads a touch loose at default tracking; tighten body copy. */
+  letter-spacing: -0.01em;
+}
+
+/* Large headings: tighten tracking to match the tighter leading. */
+h1, h2, h3,
+.mantine-Title-root {
+  letter-spacing: -0.02em;
+}
+
+/* Uppercase / small-caps text needs positive tracking so it doesn't cramp. */
+[data-uppercase],
+.uppercase {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* Comfortable reading measure (~65 chars) for opted-in prose blocks. */
+.reading-measure {
+  max-width: 68ch;
+}

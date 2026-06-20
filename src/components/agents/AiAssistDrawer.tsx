@@ -71,7 +71,7 @@ export function AiAssistDrawer({
       {proposal && (
         <Paper withBorder p="sm" radius="md">
           <Stack gap="xs">
-            <Badge variant="light" color="indigo" w="fit-content">
+            <Badge variant="light" color="brand-blue" w="fit-content">
               Proposed changes
             </Badge>
             {proposal.name && (
