@@ -1,5 +1,6 @@
 "use client";
 
+import { createElement } from "react";
 import { Avatar } from "@mantine/core";
 import { resolveIcon } from "./iconMap";
 
@@ -16,10 +17,10 @@ export function AgentAvatar({
   size = 40,
   radius = "md",
 }: AgentAvatarProps) {
-  const Icon = resolveIcon(iconName);
+  const icon = resolveIcon(iconName);
   return (
     <Avatar size={size} radius={radius} styles={{ placeholder: { backgroundColor: bgColor } }}>
-      <Icon size={Math.round(size * 0.55)} color="white" />
+      {createElement(icon, { size: Math.round(size * 0.55), color: "white" })}
     </Avatar>
   );
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useEffect, useState } from "react";
+import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
 import { Button, Container, Group, Stack, Title } from "@mantine/core";
 import { IconPlus } from "@tabler/icons-react";
@@ -12,17 +12,12 @@ import { EmptyState } from "@/components/common/EmptyState";
 function ScheduledInner() {
   const tasks = useStore((s) => s.scheduledTasks);
   const searchParams = useSearchParams();
-  const [createOpen, setCreateOpen] = useState(false);
-  const [defaultAgentId, setDefaultAgentId] = useState<string | null>(null);
-
-  // "Schedule this agent" deep-links here with ?agentId=…
-  useEffect(() => {
-    const agentId = searchParams.get("agentId");
-    if (agentId) {
-      setDefaultAgentId(agentId);
-      setCreateOpen(true);
-    }
-  }, [searchParams]);
+  // "Schedule this agent" deep-links here with ?agentId=… — seed open state from the URL.
+  const linkedAgentId = searchParams.get("agentId");
+  const [createOpen, setCreateOpen] = useState(!!linkedAgentId);
+  const [defaultAgentId, setDefaultAgentId] = useState<string | null>(
+    linkedAgentId
+  );
 
   return (
     <Container size="lg" py="xl">

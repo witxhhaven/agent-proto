@@ -9,7 +9,7 @@ import {
   Stack,
   Text,
 } from "@mantine/core";
-import type { Chat, Message } from "@/types";
+import type { Message } from "@/types";
 import { actions, getState, useStore } from "@/lib/store";
 import { createId } from "@/lib/id";
 import { extractSchedule } from "@/lib/structured";

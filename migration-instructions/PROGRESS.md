@@ -17,48 +17,42 @@ from the first unchecked item.
 
 ### Foundation
 - [x] **conventions.md** — scaffolded; `createId` + EmptyState/LoadingState/ErrorState compile.
-  ⚠️ Spec changed: `/` must **no longer redirect to `/explore`** (home chat lives there now). The
-  built `src/app/page.tsx` redirect will be removed when `home.md` is built (step below).
-- [x] **data-models.md** — `src/types/index.ts` compiles. ⚠️ **Rework pending:** add `classification`/
-  `saved`/`sharedWithYou`/`roleRecommended`/`historyRecommended` to `Assistant`, `DataClassification`
-  type, and new `AgentTemplateId` set (qa-chatbot/meeting-minutes/email-reply/document-summariser).
-- [x] **mock-data.md** — store hydrates with seeds. ⚠️ **Rework pending:** seed the new Assistant
-  flags, the 4 screenshot templates, `toggleSaved` action, `createChat` default assistantName
-  "My AI Assistant".
-- [x] **app-shell.md** — collapsible sidebar + right drawer built. ⚠️ **Rework pending:** rebrand to
-  GOVTECH Desk; new nav (New Chat top, New Project disabled, Connectors, Agent Marketplace, My
-  Agents, Scheduled); Favourited Agents + Recent Chats sections; user profile footer; remove the
-  Create-agent sidebar button.
+  `/` redirect removed (home chat lives there now). _(needs human flow-check)_
+- [x] **data-models.md** — reworked: `DataClassification` + Assistant `classification`/`saved`/
+  `sharedWithYou`/`roleRecommended`/`historyRecommended`; new `AgentTemplateId` set.
+- [x] **mock-data.md** — reworked: screenshot assistants w/ new flags, 4 automate templates,
+  `toggleSaved`, `createChat` default assistantName "My AI Assistant". _(needs human flow-check)_
+- [x] **app-shell.md** — reworked to GOVTECH Desk: Desk (BETA) brand, new nav (New Chat top, New
+  Project disabled, Connectors, Agent Marketplace, My Agents, Scheduled), Favourited Agents +
+  Recent Chats, profile footer w/ reset, no Create-agent button. _(needs human flow-check)_
 
 ### Features
-- [ ] **home.md** — `/` welcome screen (greeting + shared Composer + classification note + 4 chips);
-  chips prefill composer; first message creates+persists a chat and routes to it; blank chats never
-  listed in the sidebar.
-- [ ] **connectors.md** — static "coming soon" page with disabled integration placeholders.
-- [ ] **explore.md** — Agent Marketplace: curated rows when idle, filtered grid on search/pill;
-  cosmetic CCE/SN badge + favourite + "Save to My Agents"; "Start chat" navigates.
-- [ ] **agents-list.md** — My Agents: Created by You / Saved Agents (N) tabs + "N/5 agents used"
-  quota; "+ New Agent" opens the automate modal; row actions Edit/Test/Chat/Schedule/Delete.
-- [ ] **agent-creation.md** — automate modal ("What would you like to automate?" + 4 templates +
-  Start from scratch) → editor (Untitled Agent header, 7 Settings fields, ephemeral Test tab) →
-  AI-assist drawer; save publishes.
-- [ ] **intake-questions.md** — opening a chat with an intake agent runs the MCQ flow (LLM or mock);
-  options + free text + Skip + Back; resumes after reload; summary posts on completion.
-- [ ] **chat.md** — bubbles + intake + schedule-card kinds; shared Composer w/ cosmetic
-  classification selector; scheduling phrase creates a ScheduledTask + inline ScheduleCard; persists.
-- [ ] **scheduled.md** — ScheduleCard matches reference; manual + AI-assist create; "Test response now"
-  ephemeral; mention pills; detail Settings + Log (expandable mock responses).
+- [x] **home.md** — `/` welcome screen (greeting + shared Composer + classification note + 4 chips);
+  chips prefill; first message creates+persists chat and routes; blank chats not listed. _(needs human flow-check)_
+- [x] **connectors.md** — static "coming soon" page with disabled integration placeholders.
+- [x] **explore.md** — Agent Marketplace: curated rows when idle, filtered grid on search/pill;
+  CCE/SN badge + favourite + Save to My Agents; Start chat navigates. _(needs human flow-check)_
+- [x] **agents-list.md** — My Agents: Created by You / Saved Agents (N) tabs + N/5 quota; New Agent
+  opens automate modal; row actions Edit/Test/Chat/Schedule/Delete + confirm. _(needs human flow-check)_
+- [x] **agent-creation.md** — automate modal (4 templates + scratch) → editor (Untitled Agent header,
+  7 Settings fields, ephemeral Test tab) → AI-assist drawer; save publishes. _(needs human flow-check)_
+- [x] **intake-questions.md** — chat with intake agent runs MCQ flow (LLM/mock); options + free text +
+  Skip + Back; resumes via persisted intakeAnswers; summary posts on completion. _(needs human flow-check)_
+- [x] **chat.md** — bubbles + intake + schedule-card kinds; shared Composer w/ cosmetic classification;
+  scheduling phrase creates ScheduledTask + inline ScheduleCard; persists. _(needs human flow-check)_
+- [x] **scheduled.md** — ScheduleCard (reused in chat + listing); manual + AI-assist create; ephemeral
+  "Test response now"; @mention pills; detail Settings + Log (expandable responses, Run now). _(needs human flow-check)_
 
 ### AI
-- [ ] **proxy-setup.md** — `POST /api/llm` returns `{mock:true}` with no key; real text + structured
-  calls work with a key; key never reaches the browser.
-- [ ] **structured-output.md** — `renderQuestion`, `generateAgentDraft`, `extractSchedule` return
-  schema-valid output (real) and deterministic mock output (no key); bad output degrades to mock.
+- [x] **proxy-setup.md** — `POST /api/llm` returns `{mock:true}` with no key; text/structured with key;
+  key server-side only (never in client bundle). _(needs human flow-check with a real key)_
+- [x] **structured-output.md** — `generateStructured` + `renderQuestion`/`generateAgentDraft`/
+  `extractSchedule`, zod-validated, deterministic mock fallbacks; bad output degrades to mock.
 
 ### Final verification
-- [ ] `npm run build` passes with no type errors.
-- [ ] Manual walkthrough of the whole-prototype "Definition of done" in `00-START-HERE.md`.
-- [ ] No console errors on any route.
+- [x] `npm run build` passes with no type errors.
+- [ ] Manual walkthrough of the whole-prototype "Definition of done" in `00-START-HERE.md`. _(human flow-check)_
+- [ ] No console errors on any route. _(human flow-check — `npm run dev` and click through)_
 
 ## Notes / decisions / blockers
 <!-- Append dated entries here. Record assumptions made, anything deferred, and any [!] blockers
@@ -80,6 +74,14 @@ from the first unchecked item.
   AppFrame keeps navbar visible-but-narrow (64px) on desktop when collapsed. Placeholder pages for /agents,
   /agents/new, /scheduled, /chat/[id] will be replaced in feature steps. Store useStore caveat: selectors must
   return state-owned refs/primitives (no new arrays) to avoid useSyncExternalStore loops.
+- 2026-06-20: **All build steps complete — `npm run build` + `npx tsc --noEmit` pass.** Whole
+  prototype implemented per the refined GOVTECH Desk specs. Remaining items are human flow-checks
+  (click-through + optional real-key test) — Claude cannot click the UI. Notable choices:
+  AppFrame drops the desktop top bar (mobile burger only); shared `components/chat/Composer.tsx`
+  reused by home + chat; IntakeFlow resumes from persisted `chat.intakeAnswers`; AgentMentionInput
+  uses the textarea+token fallback (pills rendered in a preview); scheduled detail uses conditional
+  render instead of Mantine `Collapse` (Mantine 9 `in` prop mismatch). `permissions.defaultMode:auto`
+  set in project settings for hands-off building.
 - 2026-06-20: **Spec refinement from screenshots (`desk-srn-shots/`).** User confirmed GOVTECH Desk
   structure; rewrote app-shell/explore/agents-list/agent-creation/chat/conventions/data-models/mock-data/
   00-START-HERE specs and added features/home.md + features/connectors.md. Decisions captured in the

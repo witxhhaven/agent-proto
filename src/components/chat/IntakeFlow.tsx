@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Button, Group, Stack, Text } from "@mantine/core";
 import type {
   Agent,
@@ -35,7 +35,7 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
   const [answers, setAnswers] = useState<IntakeAnswer[]>(savedAnswers);
   const [status, setStatus] = useState<Status>("idle");
   // remember answered rendered questions so Back can re-show without re-calling LLM
-  const historyRef = useRef<RenderedQuestion[]>([]);
+  const [history, setHistory] = useState<RenderedQuestion[]>([]);
 
   const finish = useCallback(
     (finalAnswers: IntakeAnswer[]) => {
@@ -96,15 +96,16 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
     }
   }, [agent, answers, queue, sourceIndex, finish]);
 
-  // Kick off / continue whenever we're idle with no current question.
+  // Kick off / continue whenever we're idle with no current question. Deferred a
+  // tick so the async loader's state updates happen outside the effect body.
   useEffect(() => {
-    if (status === "idle" && !current) {
-      void advance();
-    }
+    if (status !== "idle" || current) return;
+    const id = setTimeout(() => void advance(), 0);
+    return () => clearTimeout(id);
   }, [status, current, advance]);
 
   function handleAnswer(answer: IntakeAnswer) {
-    if (current) historyRef.current.push(current);
+    if (current) setHistory((h) => [...h, current]);
     const next = [...answers, answer];
     setAnswers(next);
     actions.updateChat(chat.id, { intakeAnswers: next });
@@ -123,8 +124,9 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
   }
 
   function handleBack() {
-    const prev = historyRef.current.pop();
+    const prev = history[history.length - 1];
     if (!prev) return;
+    setHistory((h) => h.slice(0, -1));
     const next = answers.slice(0, -1);
     setAnswers(next);
     actions.updateChat(chat.id, { intakeAnswers: next });
@@ -174,7 +176,7 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
         onAnswer={handleAnswer}
         onSkip={handleSkip}
         onBack={handleBack}
-        canGoBack={historyRef.current.length > 0}
+        canGoBack={history.length > 0}
       />
     </Stack>
   );
