@@ -12,7 +12,8 @@ import {
 } from "@mantine/core";
 import { IconSparkles } from "@tabler/icons-react";
 import type { IntakeQuestion } from "@/types";
-import { mockAgentDraft, type AgentDraft } from "@/lib/agentDraft";
+import type { AgentDraft } from "@/lib/agentDraft";
+import { generateAgentDraft } from "@/lib/structured";
 
 export interface AiAssistDrawerProps {
   currentQuestions: IntakeQuestion[];
@@ -32,14 +33,17 @@ export function AiAssistDrawer({
   const [proposal, setProposal] = useState<AgentDraft | null>(null);
   const [loading, setLoading] = useState(false);
 
-  function generate() {
+  async function generate() {
     const text = input.trim();
     if (!text) return;
     setLoading(true);
-    // Synchronous mock; kept async-shaped for an easy real-LLM swap later.
-    const draft = mockAgentDraft(text, []);
-    setProposal(draft);
-    setLoading(false);
+    try {
+      // Real /api/llm when a key is present; deterministic mock otherwise.
+      const draft = await generateAgentDraft(text, currentQuestions);
+      setProposal(draft);
+    } finally {
+      setLoading(false);
+    }
   }
 
   return (

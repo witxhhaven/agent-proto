@@ -1,9 +1,13 @@
-import { Container, Title } from "@mantine/core";
+"use client";
 
-export default function ChatPage() {
-  return (
-    <Container size="md" py="md">
-      <Title order={2}>Chat</Title>
-    </Container>
-  );
+import { use } from "react";
+import { ChatView } from "@/components/chat/ChatView";
+
+export default function ChatPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
+  const { id } = use(params);
+  return <ChatView chatId={id} />;
 }
