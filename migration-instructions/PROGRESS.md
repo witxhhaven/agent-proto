@@ -16,8 +16,8 @@ from the first unchecked item.
 - [x] **data-models.md** — `src/types/index.ts` compiles; all types importable via `@/types`.
 - [x] **mock-data.md** — store hydrates with 2 agents, 2 scheduled tasks (incl. Biology newsletter),
   ~12 assistants, 15 tools, icon/color presets; mutations persist; `reset()` works; no SSR/hydration errors. _(needs human flow-check)_
-- [ ] **app-shell.md** — collapsible sidebar (state persists); active nav highlight; Chats section
-  live; right drawer opens/closes from any page.
+- [x] **app-shell.md** — collapsible sidebar (state persists); active nav highlight; Chats section
+  live; right drawer opens/closes from any page. _(needs human flow-check)_
 
 ### Features
 - [ ] **explore.md** — search + filter pills narrow the grid; favorite persists; "Start chat" navigates.
@@ -55,3 +55,10 @@ from the first unchecked item.
 - 2026-06-20: conventions.md done. layout.tsx kept minimal (MantineProvider + Notifications only); AppFrame +
   RightDrawerProvider wired in during app-shell step to keep each step's tsc green. lib/store.ts is an empty stub
   until mock-data step. theme = indigo primaryColor. Per-step local git commits (no GitHub remote).
+- 2026-06-20: app-shell.md done — **Foundation checkpoint reached; paused for user review before Features.**
+  Added common/iconMap.ts (resolveIcon/resolveBrandIcon, IconApps fallback) + common/AgentAvatar.tsx (reused
+  across screens). Right drawer = context provider (useRightDrawer) over Mantine Drawer, withOverlay={false}.
+  Sidebar collapse persisted via Mantine useLocalStorage (getInitialValueInEffect to avoid hydration mismatch);
+  AppFrame keeps navbar visible-but-narrow (64px) on desktop when collapsed. Placeholder pages for /agents,
+  /agents/new, /scheduled, /chat/[id] will be replaced in feature steps. Store useStore caveat: selectors must
+  return state-owned refs/primitives (no new arrays) to avoid useSyncExternalStore loops.

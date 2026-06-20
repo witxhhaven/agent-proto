@@ -10,6 +10,8 @@ import {
   mantineHtmlProps,
 } from "@mantine/core";
 import { Notifications } from "@mantine/notifications";
+import { AppFrame } from "@/components/shell/AppFrame";
+import { RightDrawerProvider } from "@/components/shell/RightDrawerProvider";
 import { theme } from "@/lib/theme";
 
 export const metadata: Metadata = {
@@ -30,7 +32,9 @@ export default function RootLayout({
       <body>
         <MantineProvider theme={theme}>
           <Notifications />
-          {children}
+          <RightDrawerProvider>
+            <AppFrame>{children}</AppFrame>
+          </RightDrawerProvider>
         </MantineProvider>
       </body>
     </html>
