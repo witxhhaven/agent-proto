@@ -15,7 +15,7 @@ import { RightDrawerProvider } from "@/components/shell/RightDrawerProvider";
 import { theme } from "@/lib/theme";
 
 export const metadata: Metadata = {
-  title: "Agent Studio",
+  title: "GOVTECH Desk",
   description: "AI agent marketplace + builder prototype",
 };
 
