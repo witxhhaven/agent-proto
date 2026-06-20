@@ -1,0 +1,49 @@
+/* Segmented-control styled tabs (My Agents page). */
+
+.list {
+  display: inline-flex;
+  gap: 4px;
+  padding: 4px;
+  background: var(--mantine-color-gray-2);
+  border-radius: 14px;
+  border: none;
+}
+
+.tab {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 7px 16px;
+  border-radius: 11px;
+  border: none;
+  background: transparent;
+  color: var(--mantine-color-gray-6);
+  font-weight: 600;
+  font-size: var(--mantine-font-size-sm);
+  transition:
+    background 120ms ease,
+    color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.tab:hover {
+  color: var(--mantine-color-gray-7);
+  background: rgba(255, 255, 255, 0.5);
+}
+
+/* Mantine's leftSection adds its own right margin — zero it so `gap` controls spacing. */
+.tab :global(.mantine-Tabs-tabSection) {
+  margin-inline-end: 0;
+}
+
+.tab[data-active] {
+  background: #ffffff;
+  color: var(--mantine-color-dark-7);
+  box-shadow:
+    0 1px 2px rgba(15, 23, 42, 0.06),
+    0 4px 12px rgba(15, 23, 42, 0.08);
+}
+
+.tab[data-active]:hover {
+  background: #ffffff;
+}

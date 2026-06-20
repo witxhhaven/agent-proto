@@ -14,7 +14,8 @@ import { mockAssistants } from "@/data/mockAssistants";
 import { seedAgents } from "@/data/mockAgents";
 import { seedScheduledTasks } from "@/data/mockSchedules";
 
-const KEY = "prototype:v1";
+// v2: knowledge base reshaped to named sources (file upload / Drive / SharePoint).
+const KEY = "prototype:v2";
 
 export interface StoreState {
   assistants: Assistant[];
@@ -51,9 +52,17 @@ function clone<T>(value: T): T {
 }
 
 function seedState(): StoreState {
-  const agents = clone(seedAgents);
+  // Seeded user agents are treated as already published so they appear in the
+  // marketplace, consistent with the pre-Save/Publish-split behavior.
+  const agents = clone(seedAgents).map((a) => ({
+    ...a,
+    published: a.published ?? true,
+  }));
   return {
-    assistants: [...clone(mockAssistants), ...agents.map(deriveAssistant)],
+    assistants: [
+      ...clone(mockAssistants),
+      ...agents.filter((a) => a.published).map(deriveAssistant),
+    ],
     agents,
     scheduledTasks: clone(seedScheduledTasks),
     chats: [],
@@ -142,18 +151,41 @@ export function getState(): StoreState {
 
 export const actions = {
   // agents -----------------------------------------------------------------
+  // Save = create the agent in My Agents only. It does NOT enter the marketplace
+  // until publishAgent() is called (Save vs Publish split).
   createAgent(input: Omit<Agent, "id" | "createdAt">): Agent {
     const agent: Agent = {
       ...input,
+      published: input.published ?? false,
       id: createId("agent"),
       createdAt: new Date().toISOString(),
     };
     setState({
       ...state,
       agents: [...state.agents, agent],
-      assistants: [...state.assistants, deriveAssistant(agent)],
+      ...(agent.published
+        ? { assistants: [...state.assistants, deriveAssistant(agent)] }
+        : {}),
     });
     return agent;
+  },
+
+  // Publish = submit to the marketplace. In this prototype it appears immediately
+  // (the "admin review" is cosmetic copy in the confirm modal).
+  publishAgent(id: string): void {
+    const agent = state.agents.find((a) => a.id === id);
+    if (!agent) return;
+    const agents = state.agents.map((a) =>
+      a.id === id ? { ...a, published: true } : a
+    );
+    const alreadyListed = state.assistants.some((as) => as.id === id);
+    setState({
+      ...state,
+      agents,
+      assistants: alreadyListed
+        ? state.assistants
+        : [...state.assistants, deriveAssistant({ ...agent, published: true })],
+    });
   },
 
   updateAgent(id: string, patch: Partial<Agent>): void {
@@ -283,6 +315,22 @@ export const actions = {
       ...state,
       chats: state.chats.map((c) =>
         c.id === chatId ? { ...c, messages: [...c.messages, message] } : c
+      ),
+    });
+  },
+
+  updateMessage(chatId: string, messageId: string, patch: Partial<Message>): void {
+    setState({
+      ...state,
+      chats: state.chats.map((c) =>
+        c.id === chatId
+          ? {
+              ...c,
+              messages: c.messages.map((m) =>
+                m.id === messageId ? { ...m, ...patch } : m
+              ),
+            }
+          : c
       ),
     });
   },

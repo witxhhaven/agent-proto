@@ -1,101 +1,82 @@
 "use client";
 
-import {
-  ActionIcon,
-  Button,
-  Group,
-  Paper,
-  Stack,
-  Switch,
-  Text,
-  TextInput,
-} from "@mantine/core";
-import { IconTrash, IconPlus, IconSparkles } from "@tabler/icons-react";
+import { useState } from "react";
+import { Stack, Text, Textarea } from "@mantine/core";
 import type { IntakeQuestion } from "@/types";
 import { createId } from "@/lib/id";
 
 export interface QuestionsEditorProps {
   questions: IntakeQuestion[];
   onChange: (questions: IntakeQuestion[]) => void;
-  onGenerate: () => void;
+}
+
+/**
+ * Splits free-typed text into separate questions. A question ends at a "?" or a
+ * newline, so the user can type one question and keep going with the next on the
+ * same line ("What's the goal? Who's it for?") or across wrapped lines.
+ */
+function parseQuestions(text: string): string[] {
+  return text
+    .split(/\n|(?<=\?)/)
+    .map((s) => s.trim())
+    .filter(Boolean);
 }
 
 export function QuestionsEditor({
   questions,
   onChange,
-  onGenerate,
 }: QuestionsEditorProps) {
-  function update(id: string, patch: Partial<IntakeQuestion>) {
-    onChange(questions.map((q) => (q.id === id ? { ...q, ...patch } : q)));
+  // The textarea owns the raw text so typing is never reformatted under the
+  // cursor; we parse it into questions in the background.
+  const [raw, setRaw] = useState(() =>
+    questions.map((q) => q.prompt).join("\n")
+  );
+
+  // Re-sync the raw text when questions change from outside (e.g. AI generate).
+  // Done during render (React's "adjust state on prop change" pattern) rather
+  // than in an effect, so it never reformats text the user just typed.
+  const [seen, setSeen] = useState(questions);
+  if (seen !== questions) {
+    setSeen(questions);
+    const parsed = parseQuestions(raw);
+    const current = questions.map((q) => q.prompt);
+    const same =
+      parsed.length === current.length &&
+      parsed.every((p, i) => p === current[i]);
+    if (!same) setRaw(current.join("\n"));
   }
 
-  return (
-    <Stack gap="sm">
-      {questions.length === 0 && (
-        <Text size="sm" c="dimmed">
-          No intake questions yet. Add questions to ask the user when a chat
-          starts, or generate them with AI.
-        </Text>
-      )}
-      {questions.map((q, i) => (
-        <Paper key={q.id} withBorder p="sm" radius="sm">
-          <Stack gap="xs">
-            <Group justify="space-between" wrap="nowrap">
-              <Text size="xs" c="dimmed">
-                Question {i + 1}
-              </Text>
-              <ActionIcon
-                variant="subtle"
-                color="red"
-                onClick={() => onChange(questions.filter((x) => x.id !== q.id))}
-                aria-label="Remove question"
-              >
-                <IconTrash size={14} />
-              </ActionIcon>
-            </Group>
-            <TextInput
-              placeholder="What do you want to ask?"
-              value={q.prompt}
-              onChange={(e) => update(q.id, { prompt: e.currentTarget.value })}
-            />
-            <TextInput
-              placeholder="Help text (optional)"
-              value={q.helpText ?? ""}
-              onChange={(e) => update(q.id, { helpText: e.currentTarget.value })}
-              size="xs"
-            />
-            <Switch
-              label="Allow multiple selections"
-              checked={q.allowMultiple ?? false}
-              onChange={(e) =>
-                update(q.id, { allowMultiple: e.currentTarget.checked })
-              }
-              size="xs"
-            />
-          </Stack>
-        </Paper>
-      ))}
+  function handleChange(value: string) {
+    setRaw(value);
+    const prompts = parseQuestions(value);
+    onChange(
+      prompts.map((prompt, i) => ({
+        ...questions[i],
+        id: questions[i]?.id ?? createId("q"),
+        prompt,
+      }))
+    );
+  }
 
-      <Group gap="xs">
-        <Button
-          variant="light"
-          size="xs"
-          leftSection={<IconPlus size={14} />}
-          onClick={() =>
-            onChange([...questions, { id: createId("q"), prompt: "" }])
-          }
-        >
-          Add question
-        </Button>
-        <Button
-          variant="subtle"
-          size="xs"
-          leftSection={<IconSparkles size={14} />}
-          onClick={onGenerate}
-        >
-          Generate / improve with AI
-        </Button>
-      </Group>
+  const count = parseQuestions(raw).length;
+
+  return (
+    <Stack gap="xs">
+      <Textarea
+        placeholder={
+          "Type your questions — start a new one whenever, e.g.\nWhat are you trying to accomplish? Who is the audience?\nWhat tone should I use?"
+        }
+        value={raw}
+        onChange={(e) => handleChange(e.currentTarget.value)}
+        autosize
+        minRows={4}
+        maxRows={12}
+      />
+      <Text size="xs" c="dimmed">
+        {count === 0
+          ? "Each question (ending with “?” or on its own line) is asked when a chat starts; the AI turns each into a multiple-choice question."
+          : `Detected ${count} question${count > 1 ? "s" : ""}. The AI turns each into a multiple-choice question when a chat starts.`}
+      </Text>
     </Stack>
   );
 }

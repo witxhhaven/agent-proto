@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Alert,
   Button,
@@ -24,26 +24,53 @@ import {
   type ScheduleDraft,
 } from "./ScheduleForm";
 
+/** Build an editable draft from an existing scheduled task. */
+function draftFromTask(task: ScheduledTask): ScheduleDraft {
+  return {
+    title: task.title,
+    mode: task.agentId ? "agent" : "standalone",
+    agentId: task.agentId,
+    instructions: task.instructions,
+    knowledgeFileRef: task.knowledgeFileRef ?? null,
+    timing: task.timing,
+  };
+}
+
 export function ScheduleCreate({
   opened,
   onClose,
   defaultAgentId,
+  task,
 }: {
   opened: boolean;
   onClose: () => void;
   defaultAgentId?: string | null;
+  /** When provided, the modal edits this task (prefilled) instead of creating. */
+  task?: ScheduledTask;
 }) {
-  const [draft, setDraft] = useState<ScheduleDraft>(() => {
+  const isEdit = !!task;
+  const makeInitial = (): ScheduleDraft => {
+    if (task) return draftFromTask(task);
     const base = emptyScheduleDraft();
     if (defaultAgentId) {
       base.mode = "agent";
       base.agentId = defaultAgentId;
     }
     return base;
-  });
+  };
+  const [draft, setDraft] = useState<ScheduleDraft>(makeInitial);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
   const [testResponse, setTestResponse] = useState<string | null>(null);
+
+  // Re-prefill from the task each time an edit modal is (re)opened.
+  useEffect(() => {
+    if (opened && task) {
+      setDraft(draftFromTask(task));
+      setTestResponse(null);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [opened, task]);
 
   async function runAi() {
     const text = aiPrompt.trim();
@@ -93,24 +120,32 @@ export function ScheduleCreate({
       });
       return;
     }
-    const task: Omit<
-      ScheduledTask,
-      "id" | "createdAt" | "lastRun" | "runHistory"
-    > = {
+    const fields = {
       title: draft.title.trim(),
       instructions: draft.instructions,
       agentId: draft.mode === "agent" ? draft.agentId : null,
       knowledgeFileRef: draft.knowledgeFileRef,
       timing: draft.timing,
-      enabled: true,
-      origin: "schedule-page",
     };
-    actions.createScheduledTask(task);
-    notifications.show({
-      title: "Schedule created",
-      message: `${task.title} is now scheduled.`,
-      color: "brand-blue",
-    });
+    if (isEdit && task) {
+      actions.updateScheduledTask(task.id, fields);
+      notifications.show({
+        title: "Schedule updated",
+        message: `${fields.title} has been updated.`,
+        color: "brand-blue",
+      });
+    } else {
+      actions.createScheduledTask({
+        ...fields,
+        enabled: true,
+        origin: "schedule-page",
+      });
+      notifications.show({
+        title: "Schedule created",
+        message: `${fields.title} is now scheduled.`,
+        color: "brand-blue",
+      });
+    }
     onClose();
   }
 
@@ -118,7 +153,7 @@ export function ScheduleCreate({
     <Modal
       opened={opened}
       onClose={onClose}
-      title="New schedule"
+      title={isEdit ? "Edit schedule" : "New schedule"}
       size="lg"
       centered
     >

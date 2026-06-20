@@ -66,7 +66,7 @@ export function Composer({
         placeholder={placeholder}
         variant="unstyled"
         autosize
-        minRows={1}
+        minRows={2}
         maxRows={8}
         disabled={disabled}
         autoFocus={autoFocus}

@@ -6,7 +6,12 @@ export interface LlmRequest {
   messages: { role: "user" | "assistant"; content: string }[];
   tool?: { name: string; description: string; input_schema: object };
   maxTokens?: number;
+  /** text mode only — stream the reply as plain-text chunks. */
+  stream?: boolean;
 }
+
+const MOCK_REPLY =
+  "Here's a mock reply. Add an ANTHROPIC_API_KEY to .env.local for real responses.";
 
 export async function POST(req: Request) {
   let body: LlmRequest;
@@ -17,11 +22,53 @@ export async function POST(req: Request) {
   }
 
   const key = process.env.ANTHROPIC_API_KEY;
-  // No key → tell the client to use its deterministic mock.
-  if (!key) return Response.json({ mock: true });
+  // No key → fall back to a deterministic mock. For streaming requests we still
+  // return a (tiny) text stream so the client can read it the same way.
+  if (!key) {
+    if (body.stream) {
+      return new Response(MOCK_REPLY, {
+        headers: { "Content-Type": "text/plain; charset=utf-8", "x-llm-mock": "1" },
+      });
+    }
+    return Response.json({ mock: true });
+  }
 
   const client = new Anthropic({ apiKey: key });
   const model = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
+
+  // Streaming text path — emit text deltas as they arrive.
+  if (body.stream && body.mode !== "structured") {
+    const encoder = new TextEncoder();
+    const rs = new ReadableStream<Uint8Array>({
+      async start(controller) {
+        try {
+          const stream = client.messages.stream({
+            model,
+            max_tokens: body.maxTokens ?? 1024,
+            system: body.system,
+            messages: body.messages,
+          });
+          for await (const event of stream) {
+            if (
+              event.type === "content_block_delta" &&
+              event.delta.type === "text_delta"
+            ) {
+              controller.enqueue(encoder.encode(event.delta.text));
+            }
+          }
+        } catch (err) {
+          const message =
+            err instanceof Error ? err.message : "LLM stream failed";
+          controller.enqueue(encoder.encode(`\n[error: ${message}]`));
+        } finally {
+          controller.close();
+        }
+      },
+    });
+    return new Response(rs, {
+      headers: { "Content-Type": "text/plain; charset=utf-8" },
+    });
+  }
 
   try {
     if (body.mode === "structured" && body.tool) {

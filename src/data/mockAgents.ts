@@ -18,12 +18,13 @@ export const agentTemplates: AgentTemplate[] = [
       "What should happen when an answer isn't in the knowledge base?",
     ],
     defaultKnowledge: {
-      snippets: [
+      sources: [
         {
           id: "kb_qa_scope",
-          title: "Answer scope",
-          content:
-            "Only answer from approved policy documents. Escalate anything outside scope.",
+          name: "Approved policy documents",
+          type: "google-drive",
+          files: [],
+          url: "https://drive.google.com/drive/folders/policies",
         },
       ],
     },
@@ -60,11 +61,19 @@ export const agentTemplates: AgentTemplate[] = [
       "Who is the sender's typical audience?",
     ],
     defaultKnowledge: {
-      snippets: [
+      sources: [
         {
           id: "kb_email_voice",
-          title: "Brand voice",
-          content: "Warm, direct, and professional. Avoid jargon and filler.",
+          name: "Brand voice guide",
+          type: "file",
+          files: [
+            {
+              id: "kb_email_voice_f",
+              name: "brand_voice.pdf",
+              sizeLabel: "24 KB",
+              kind: "pdf",
+            },
+          ],
         },
       ],
     },
@@ -109,17 +118,21 @@ export const seedAgents: Agent[] = [
     instructions:
       "Triage incoming email by urgency, then draft a reply in a warm but efficient tone. Surface anything that needs a human decision before sending.",
     knowledgeBase: {
-      files: [
-        { id: "kb_f1", name: "support_macros.pdf", sizeLabel: "84 KB", kind: "pdf" },
-      ],
-      links: [
-        { id: "kb_l1", url: "https://example.com/style-guide", title: "Email style guide" },
-      ],
-      snippets: [
+      sources: [
         {
-          id: "kb_s1",
-          title: "Signature",
-          content: "Best,\nThe Team\nsupport@example.com",
+          id: "kb_f1",
+          name: "Support macros",
+          type: "file",
+          files: [
+            { id: "kb_f1_a", name: "support_macros.pdf", sizeLabel: "84 KB", kind: "pdf" },
+          ],
+        },
+        {
+          id: "kb_l1",
+          name: "Email style guide",
+          type: "sharepoint",
+          files: [],
+          url: "https://contoso.sharepoint.com/sites/style-guide",
         },
       ],
     },
@@ -149,17 +162,21 @@ export const seedAgents: Agent[] = [
     instructions:
       "Each run, pull the latest on the watchlist topics and produce a themed digest with citations and a short 'what changed' summary at the top.",
     knowledgeBase: {
-      files: [
-        { id: "kb_f2", name: "watchlist.csv", sizeLabel: "3 KB", kind: "csv" },
-      ],
-      links: [
-        { id: "kb_l2", url: "https://example.com/markets", title: "Markets dashboard" },
-      ],
-      snippets: [
+      sources: [
         {
-          id: "kb_s2",
-          title: "Coverage rules",
-          content: "Prefer primary filings and official releases over secondary commentary.",
+          id: "kb_f2",
+          name: "Watchlist",
+          type: "file",
+          files: [
+            { id: "kb_f2_a", name: "watchlist.csv", sizeLabel: "3 KB", kind: "csv" },
+          ],
+        },
+        {
+          id: "kb_l2",
+          name: "Markets dashboard",
+          type: "google-drive",
+          files: [],
+          url: "https://drive.google.com/drive/folders/markets",
         },
       ],
     },

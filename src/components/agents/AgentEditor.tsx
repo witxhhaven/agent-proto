@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ActionIcon,
@@ -8,8 +8,9 @@ import {
   Button,
   Card,
   Container,
+  Divider,
   Group,
-  Menu,
+  Modal,
   Stack,
   Tabs,
   Text,
@@ -22,8 +23,11 @@ import { notifications } from "@mantine/notifications";
 import {
   IconArrowLeft,
   IconSparkles,
-  IconChevronDown,
+  IconWorldUpload,
   IconSparkles as IconCustom,
+  IconId,
+  IconBrain,
+  IconMessageQuestion,
 } from "@tabler/icons-react";
 import type { Agent, AgentTemplateId, IntakeQuestion, KnowledgeBase } from "@/types";
 import { actions } from "@/lib/store";
@@ -35,6 +39,7 @@ import { ToolsSelect } from "./ToolsSelect";
 import { QuestionsEditor } from "./QuestionsEditor";
 import { AgentTestChat } from "./AgentTestChat";
 import { AiAssistDrawer } from "./AiAssistDrawer";
+import tabClasses from "@/app/agents/segmented-tabs.module.css";
 import type { AgentDraft } from "@/lib/agentDraft";
 import { createId } from "@/lib/id";
 
@@ -50,6 +55,7 @@ export interface AgentDraftState {
   toolIds: string[];
   questions: IntakeQuestion[];
   enabled: boolean;
+  published: boolean;
 }
 
 export function emptyDraft(): AgentDraftState {
@@ -61,10 +67,11 @@ export function emptyDraft(): AgentDraftState {
     bgColor: "#4F46E5",
     imageUrl: undefined,
     instructions: "",
-    knowledgeBase: { files: [], links: [], snippets: [] },
+    knowledgeBase: { sources: [] },
     toolIds: [],
     questions: [],
     enabled: true,
+    published: false,
   };
 }
 
@@ -81,6 +88,7 @@ export function draftFromAgent(agent: Agent): AgentDraftState {
     toolIds: agent.toolIds,
     questions: agent.questions,
     enabled: agent.enabled,
+    published: agent.published ?? false,
   };
 }
 
@@ -88,19 +96,27 @@ export function AgentEditor({
   initial,
   agentId,
   isNew,
+  assistSeed,
 }: {
   initial: AgentDraftState;
   agentId?: string;
   isNew: boolean;
+  /** Description from the "Draft with AI" modal — seeds the assist chat. */
+  assistSeed?: string;
 }) {
   const router = useRouter();
   const drawer = useRightDrawer();
   const [draft, setDraft] = useState<AgentDraftState>(initial);
+  const [savedId, setSavedId] = useState<string | null>(agentId ?? null);
+  const [publishOpen, setPublishOpen] = useState(false);
+  const seededRef = useRef(false);
 
   function patch(p: Partial<AgentDraftState>) {
     setDraft((d) => ({ ...d, ...p }));
   }
 
+  // Live-merge an AI draft into the form without closing the assist chat, so the
+  // creator can keep refining it conversationally.
   function applyAiDraft(ai: AgentDraft) {
     setDraft((d) => ({
       ...d,
@@ -111,31 +127,31 @@ export function AgentEditor({
       questions:
         ai.questions && ai.questions.length ? ai.questions : d.questions,
     }));
-    drawer.close();
-    notifications.show({
-      title: "Draft applied",
-      message: "The AI suggestions were merged into the form.",
-      color: "brand-blue",
-    });
   }
 
-  function openAssist() {
+  function openAssist(seed?: string) {
     drawer.open(
-      <AiAssistDrawer currentQuestions={draft.questions} onApply={applyAiDraft} />,
+      <AiAssistDrawer
+        currentQuestions={draft.questions}
+        onApply={applyAiDraft}
+        initialMessage={seed}
+      />,
       { title: "AI assist" }
     );
   }
 
-  function save() {
-    if (!draft.name.trim()) {
-      notifications.show({
-        title: "Name required",
-        message: "Give your agent a name before saving.",
-        color: "red",
-      });
-      return;
+  // Arriving from the "Draft with AI" modal: open the assist chat seeded with
+  // the creator's description so it fills the form on the first turn.
+  useEffect(() => {
+    if (assistSeed && !seededRef.current) {
+      seededRef.current = true;
+      openAssist(assistSeed);
     }
-    const payload = {
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [assistSeed]);
+
+  function buildPayload() {
+    return {
       templateId: draft.templateId,
       name: draft.name.trim(),
       description: draft.description.trim() || "A custom agent.",
@@ -147,29 +163,92 @@ export function AgentEditor({
       toolIds: draft.toolIds,
       questions: draft.questions.filter((q) => q.prompt.trim()),
       enabled: draft.enabled,
+      published: draft.published,
     };
-    if (isNew || !agentId) {
-      actions.createAgent(payload);
-    } else {
-      actions.updateAgent(agentId, payload);
+  }
+
+  // Create on first save, update thereafter. Returns the agent id (or null if
+  // validation failed). Both Save and Publish persist via this; neither navigates
+  // away — the creator stays in the editor.
+  function persist(): string | null {
+    if (!draft.name.trim()) {
+      notifications.show({
+        title: "Name required",
+        message: "Give your agent a name before saving.",
+        color: "red",
+      });
+      return null;
     }
+    const payload = buildPayload();
+    if (savedId) {
+      actions.updateAgent(savedId, payload);
+      return savedId;
+    }
+    const created = actions.createAgent(payload);
+    setSavedId(created.id);
+    return created.id;
+  }
+
+  // Save = keep it in My Agents as a draft (not in the Marketplace yet).
+  function save() {
+    const id = persist();
+    if (!id) return;
     notifications.show({
-      title: isNew ? "Agent published" : "Agent updated",
-      message: `${payload.name} is live in My Agents and the Agent Marketplace.`,
+      title: draft.published ? "Changes saved" : "Saved to My Agents",
+      message: draft.published
+        ? `${draft.name.trim()} has been updated.`
+        : `${draft.name.trim()} is saved in My Agents as a draft. Publish it to add it to the Marketplace.`,
       color: "brand-blue",
     });
-    router.push("/agents");
+  }
+
+  function openPublish() {
+    if (!draft.name.trim()) {
+      notifications.show({
+        title: "Name required",
+        message: "Give your agent a name before publishing.",
+        color: "red",
+      });
+      return;
+    }
+    setPublishOpen(true);
+  }
+
+  // Publish = submit to the Marketplace. Cosmetically "needs admin review", but in
+  // this prototype it appears immediately.
+  function confirmPublish() {
+    const id = persist();
+    if (!id) {
+      setPublishOpen(false);
+      return;
+    }
+    actions.publishAgent(id);
+    patch({ published: true });
+    setPublishOpen(false);
+    notifications.show({
+      title: "Submitted to the Marketplace",
+      message: `${draft.name.trim()} is now live in the Agent Marketplace.`,
+      color: "brand-blue",
+    });
   }
 
   return (
     <Box>
-      {/* Editor header */}
+      <Tabs defaultValue="settings" variant="pills">
+      {/* Editor header — tabs centred within it */}
       <Group
         justify="space-between"
         px="md"
         py="sm"
         wrap="nowrap"
-        style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}
+        style={{
+          position: "sticky",
+          top: 0,
+          zIndex: 100,
+          minHeight: 56,
+          backgroundColor: "var(--mantine-color-gray-0)",
+          borderBottom: "1px solid var(--mantine-color-gray-2)",
+        }}
       >
         <Group gap="sm" wrap="nowrap" style={{ minWidth: 0 }}>
           <ActionIcon
@@ -190,42 +269,60 @@ export function AgentEditor({
             {draft.name.trim() || "Untitled Agent"}
           </Text>
         </Group>
+        <Box
+          style={{
+            position: "absolute",
+            left: "50%",
+            top: "50%",
+            transform: "translate(-50%, -50%)",
+          }}
+        >
+          <Tabs.List className={tabClasses.list}>
+            <Tabs.Tab value="settings" className={tabClasses.tab}>
+              Settings
+            </Tabs.Tab>
+            <Tabs.Tab value="test" className={tabClasses.tab}>
+              Test
+            </Tabs.Tab>
+          </Tabs.List>
+        </Box>
         <Group gap="xs" wrap="nowrap">
-          <Tooltip label="AI assist">
+          <Tooltip label={drawer.isOpen ? "Hide AI assist" : "AI assist"}>
             <ActionIcon
-              variant="subtle"
+              variant={drawer.isOpen ? "filled" : "subtle"}
               color="brand-blue"
-              onClick={openAssist}
-              aria-label="AI assist"
+              onClick={() => (drawer.isOpen ? drawer.close() : openAssist())}
+              aria-label="Toggle AI assist"
             >
               <IconSparkles size={18} />
             </ActionIcon>
           </Tooltip>
-          <Button.Group>
-            <Button onClick={save}>Save</Button>
-            <Menu position="bottom-end" withinPortal>
-              <Menu.Target>
-                <Button px={8} aria-label="Save options">
-                  <IconChevronDown size={16} />
-                </Button>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Item onClick={save}>Save &amp; publish</Menu.Item>
-              </Menu.Dropdown>
-            </Menu>
-          </Button.Group>
+          <Button
+            variant="outline"
+            onClick={save}
+            styles={{
+              root: {
+                borderColor: "#000",
+                color: "#000",
+                backgroundColor: "#fff",
+              },
+            }}
+          >
+            Save
+          </Button>
+          <Button
+            leftSection={<IconWorldUpload size={16} />}
+            onClick={openPublish}
+            disabled={draft.published}
+          >
+            {draft.published ? "Published" : "Publish"}
+          </Button>
         </Group>
       </Group>
 
       <Container size="md" py="xl">
-        <Tabs defaultValue="settings">
-          <Tabs.List mb="lg">
-            <Tabs.Tab value="settings">Settings</Tabs.Tab>
-            <Tabs.Tab value="test">Test</Tabs.Tab>
-          </Tabs.List>
-
           <Tabs.Panel value="settings">
-            <Stack gap="lg">
+            <Stack gap="xl">
               {isNew && draft.templateId === "scratch" && (
                 <Card withBorder radius="md" padding="lg" bg="gray.0">
                   <Group align="flex-start" gap="md" wrap="nowrap">
@@ -243,7 +340,14 @@ export function AgentEditor({
                 </Card>
               )}
 
-              <Field label="Agent Name" required>
+              <SectionHeader
+                icon={<IconId size={22} />}
+                label="Profile"
+                description="How the agent appears in the marketplace and chats."
+                withLine={false}
+              />
+
+              <Field label="Agent name" required>
                 <TextInput
                   placeholder="Untitled Agent"
                   value={draft.name}
@@ -251,7 +355,7 @@ export function AgentEditor({
                 />
               </Field>
 
-              <Field label="Icon & color">
+              <Field label="Icon & colour">
                 <IconColorPicker
                   iconName={draft.iconName}
                   bgColor={draft.bgColor}
@@ -268,14 +372,16 @@ export function AgentEditor({
                 />
               </Field>
 
-              <Field label="Knowledge base">
-                <KnowledgeBaseField
-                  value={draft.knowledgeBase}
-                  onChange={(kb) => patch({ knowledgeBase: kb })}
-                />
-              </Field>
+              <SectionHeader
+                icon={<IconBrain size={22} />}
+                label="Capabilities"
+                description="What the agent knows and can do."
+              />
 
-              <Field label="Instructions">
+              <Field
+                label="Instructions"
+                description="Tell the agent how to behave, its tone, and what to do."
+              >
                 <Textarea
                   placeholder="Describe how the agent should behave…"
                   value={draft.instructions}
@@ -285,18 +391,39 @@ export function AgentEditor({
                 />
               </Field>
 
-              <Field label="Tools">
+              <Field
+                label="Knowledge base"
+                description="Reference files and links the agent can draw on."
+              >
+                <KnowledgeBaseField
+                  value={draft.knowledgeBase}
+                  onChange={(kb) => patch({ knowledgeBase: kb })}
+                />
+              </Field>
+
+              <Field
+                label="Tools"
+                description="Connected actions the agent can use, like email or files."
+              >
                 <ToolsSelect
                   toolIds={draft.toolIds}
                   onChange={(toolIds) => patch({ toolIds })}
                 />
               </Field>
 
-              <Field label="Intake questions">
+              <SectionHeader
+                icon={<IconMessageQuestion size={22} />}
+                label="Onboarding"
+                description="What the agent asks users when a chat starts."
+              />
+
+              <Field
+                label="Onboarding questions"
+                description="A quick multiple-choice flow shown when a chat starts, collecting the details this agent needs to perform well."
+              >
                 <QuestionsEditor
                   questions={draft.questions}
                   onChange={(questions) => patch({ questions })}
-                  onGenerate={openAssist}
                 />
               </Field>
             </Stack>
@@ -305,36 +432,114 @@ export function AgentEditor({
           <Tabs.Panel value="test">
             <AgentTestChat
               name={draft.name}
+              description={draft.description}
               instructions={draft.instructions}
               questions={draft.questions}
             />
           </Tabs.Panel>
-        </Tabs>
       </Container>
+      </Tabs>
+
+      <Modal
+        opened={publishOpen}
+        onClose={() => setPublishOpen(false)}
+        title="Publish to the Agent Marketplace?"
+        centered
+        size="md"
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            Publishing submits{" "}
+            <strong>{draft.name.trim() || "this agent"}</strong> to the Agent
+            Marketplace. It will need to be reviewed and approved by the
+            administrators before it goes live, which may take a while.
+          </Text>
+          <Group justify="flex-end" gap="xs">
+            <Button variant="default" onClick={() => setPublishOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              leftSection={<IconWorldUpload size={16} />}
+              onClick={confirmPublish}
+            >
+              Publish
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
     </Box>
+  );
+}
+
+function SectionHeader({
+  icon,
+  label,
+  description,
+  withLine = true,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  description?: string;
+  withLine?: boolean;
+}) {
+  return (
+    <Stack gap={4} mt="sm">
+      {withLine && <Divider />}
+      <Group gap={8} wrap="nowrap" mt={withLine ? 4 : 0}>
+        <ThemeIcon variant="transparent" color="brand-blue" size="lg" p={0}>
+          {icon}
+        </ThemeIcon>
+        <Text fw={700} size="lg">
+          {label}
+        </Text>
+      </Group>
+      {description && (
+        <Text size="sm" c="dimmed">
+          {description}
+        </Text>
+      )}
+    </Stack>
   );
 }
 
 function Field({
   label,
+  icon,
   required,
+  description,
   children,
 }: {
   label: string;
+  icon?: React.ReactNode;
   required?: boolean;
+  description?: string;
   children: React.ReactNode;
 }) {
   return (
     <Stack gap={6}>
-      <Text fw={600} size="sm">
-        {label}
-        {required && (
-          <Text span c="red">
-            {" "}
-            *
+      <Stack gap={2}>
+        <Group gap={8} wrap="nowrap">
+          {icon && (
+            <ThemeIcon variant="light" size="md" radius="sm" color="brand-blue">
+              {icon}
+            </ThemeIcon>
+          )}
+          <Text fw={600} size="md">
+            {label}
+            {required && (
+              <Text span c="red">
+                {" "}
+                *
+              </Text>
+            )}
+          </Text>
+        </Group>
+        {description && (
+          <Text size="sm" c="dimmed">
+            {description}
           </Text>
         )}
-      </Text>
+      </Stack>
       {children}
     </Stack>
   );

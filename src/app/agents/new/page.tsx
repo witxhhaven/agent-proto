@@ -9,7 +9,6 @@ import {
   type AgentDraftState,
 } from "@/components/agents/AgentEditor";
 import { AgentTemplatesModal } from "@/components/agents/AgentTemplatesModal";
-import { mockAgentDraft } from "@/lib/agentDraft";
 import { createId } from "@/lib/id";
 
 function draftFromTemplate(t: AgentTemplate): AgentDraftState {
@@ -20,23 +19,21 @@ function draftFromTemplate(t: AgentTemplate): AgentDraftState {
     iconName: t.iconName,
     bgColor: t.bgColor,
     instructions: t.defaultInstructions,
-    knowledgeBase: {
-      files: t.defaultKnowledge?.files ?? [],
-      links: t.defaultKnowledge?.links ?? [],
-      snippets: t.defaultKnowledge?.snippets ?? [],
-    },
+    knowledgeBase: { sources: t.defaultKnowledge?.sources ?? [] },
     toolIds: t.defaultToolIds,
     questions: t.defaultQuestions.map((prompt) => ({
       id: createId("q"),
       prompt,
     })),
     enabled: true,
+    published: false,
   };
 }
 
 export default function NewAgentPage() {
   const router = useRouter();
   const [draft, setDraft] = useState<AgentDraftState | null>(null);
+  const [assistSeed, setAssistSeed] = useState<string | undefined>(undefined);
   const [modalOpen, setModalOpen] = useState(true);
 
   function close() {
@@ -45,7 +42,7 @@ export default function NewAgentPage() {
   }
 
   if (draft) {
-    return <AgentEditor initial={draft} isNew />;
+    return <AgentEditor initial={draft} isNew assistSeed={assistSeed} />;
   }
 
   return (
@@ -57,15 +54,10 @@ export default function NewAgentPage() {
         setModalOpen(false);
       }}
       onDraftWithAi={(description) => {
-        const ai = mockAgentDraft(description, []);
-        setDraft({
-          ...emptyDraft(),
-          name: ai.name ?? "",
-          description: ai.description ?? "",
-          instructions: ai.instructions ?? "",
-          toolIds: ai.toolIds ?? [],
-          questions: ai.questions,
-        });
+        // Open the editor with an empty draft and hand the description to the
+        // AI-assist chat, which fills the form conversationally from the first turn.
+        setDraft(emptyDraft());
+        setAssistSeed(description);
         setModalOpen(false);
       }}
       onScratch={() => {

@@ -1,19 +1,24 @@
 "use client";
 
-import { useState } from "react";
 import {
   ActionIcon,
   Button,
   Group,
   Paper,
+  Select,
   Stack,
-  Tabs,
   Text,
   TextInput,
-  Textarea,
 } from "@mantine/core";
-import { IconFile, IconLink, IconNote, IconTrash, IconPlus } from "@tabler/icons-react";
-import type { KnowledgeBase } from "@/types";
+import {
+  IconBrandGoogleDrive,
+  IconCloud,
+  IconFile,
+  IconPlus,
+  IconTrash,
+  IconUpload,
+} from "@tabler/icons-react";
+import type { KbFile, KbSource, KbSourceType, KnowledgeBase } from "@/types";
 import { createId } from "@/lib/id";
 
 export interface KnowledgeBaseFieldProps {
@@ -23,7 +28,13 @@ export interface KnowledgeBaseFieldProps {
 
 const FAKE_SIZES = ["12 KB", "84 KB", "248 KB", "1.2 MB", "640 KB"];
 
-function kindFromName(name: string): KnowledgeBase["files"][number]["kind"] {
+const SOURCE_TYPES: { value: KbSourceType; label: string }[] = [
+  { value: "file", label: "Upload a file" },
+  { value: "google-drive", label: "Google Drive" },
+  { value: "sharepoint", label: "SharePoint" },
+];
+
+function kindFromName(name: string): KbFile["kind"] {
   const ext = name.split(".").pop()?.toLowerCase();
   if (ext === "pdf") return "pdf";
   if (ext === "docx" || ext === "doc") return "docx";
@@ -33,228 +44,187 @@ function kindFromName(name: string): KnowledgeBase["files"][number]["kind"] {
   return "other";
 }
 
-export function KnowledgeBaseField({ value, onChange }: KnowledgeBaseFieldProps) {
-  const [linkUrl, setLinkUrl] = useState("");
-  const [linkTitle, setLinkTitle] = useState("");
-  const [snipTitle, setSnipTitle] = useState("");
-  const [snipBody, setSnipBody] = useState("");
+function urlPlaceholder(type: KbSourceType): string {
+  if (type === "google-drive")
+    return "https://drive.google.com/drive/folders/…";
+  if (type === "sharepoint")
+    return "https://contoso.sharepoint.com/sites/…";
+  return "https://…";
+}
 
-  function addFile(file: File, idx: number) {
+export function KnowledgeBaseField({ value, onChange }: KnowledgeBaseFieldProps) {
+  // Defensive: tolerate any legacy/empty value lacking `sources`.
+  const sources = value.sources ?? [];
+
+  function patchSource(id: string, patch: Partial<KbSource>) {
     onChange({
-      ...value,
-      files: [
-        ...value.files,
-        {
-          id: createId("kb"),
-          name: file.name,
-          sizeLabel: FAKE_SIZES[idx % FAKE_SIZES.length],
-          kind: kindFromName(file.name),
-        },
+      sources: sources.map((s) => (s.id === id ? { ...s, ...patch } : s)),
+    });
+  }
+
+  function addSource() {
+    onChange({
+      sources: [
+        ...sources,
+        { id: createId("kb"), name: "", type: "file", files: [] },
       ],
     });
   }
 
+  function removeSource(id: string) {
+    onChange({ sources: sources.filter((s) => s.id !== id) });
+  }
+
+  function addFiles(source: KbSource, files: File[]) {
+    const added: KbFile[] = files.map((f, i) => ({
+      id: createId("kbf"),
+      name: f.name,
+      sizeLabel: FAKE_SIZES[(source.files.length + i) % FAKE_SIZES.length],
+      kind: kindFromName(f.name),
+    }));
+    patchSource(source.id, { files: [...source.files, ...added] });
+  }
+
   return (
-    <Tabs defaultValue="files" variant="outline">
-      <Tabs.List>
-        <Tabs.Tab value="files" leftSection={<IconFile size={14} />}>
-          Files ({value.files.length})
-        </Tabs.Tab>
-        <Tabs.Tab value="links" leftSection={<IconLink size={14} />}>
-          Links ({value.links.length})
-        </Tabs.Tab>
-        <Tabs.Tab value="snippets" leftSection={<IconNote size={14} />}>
-          Text ({value.snippets.length})
-        </Tabs.Tab>
-      </Tabs.List>
+    <Stack gap="sm">
+      {sources.length === 0 && (
+        <Text size="sm" c="dimmed">
+          No knowledge sources yet. Add a source to give this agent files or a
+          linked Drive/SharePoint location to draw from.
+        </Text>
+      )}
 
-      <Tabs.Panel value="files" pt="sm">
-        <Stack gap="xs">
-          {value.files.map((f) => (
-            <Paper key={f.id} withBorder p="xs" radius="sm">
-              <Group justify="space-between" wrap="nowrap">
-                <Group gap="xs" wrap="nowrap">
-                  <IconFile size={16} />
-                  <Text size="sm">{f.name}</Text>
-                  <Text size="xs" c="dimmed">
-                    {f.sizeLabel}
-                  </Text>
-                </Group>
-                <ActionIcon
-                  variant="subtle"
-                  color="red"
-                  onClick={() =>
-                    onChange({
-                      ...value,
-                      files: value.files.filter((x) => x.id !== f.id),
-                    })
-                  }
-                  aria-label="Remove file"
-                >
-                  <IconTrash size={14} />
-                </ActionIcon>
-              </Group>
-            </Paper>
-          ))}
-          <Button
-            component="label"
-            variant="light"
-            leftSection={<IconPlus size={14} />}
-            size="xs"
-            w="fit-content"
-          >
-            Add file
-            <input
-              type="file"
-              hidden
-              multiple
-              onChange={(e) => {
-                const files = Array.from(e.currentTarget.files ?? []);
-                files.forEach(addFile);
-                e.currentTarget.value = "";
-              }}
-            />
-          </Button>
-        </Stack>
-      </Tabs.Panel>
+      {sources.map((source) => (
+        <Paper key={source.id} withBorder p="md" radius="md">
+          <Stack gap="sm">
+            <Group justify="space-between" align="flex-start" wrap="nowrap">
+              <TextInput
+                label="Source name"
+                placeholder="e.g. HR Policy documents"
+                value={source.name}
+                onChange={(e) =>
+                  patchSource(source.id, { name: e.currentTarget.value })
+                }
+                style={{ flex: 1 }}
+              />
+              <ActionIcon
+                variant="subtle"
+                color="red"
+                mt={28}
+                onClick={() => removeSource(source.id)}
+                aria-label="Remove source"
+              >
+                <IconTrash size={16} />
+              </ActionIcon>
+            </Group>
 
-      <Tabs.Panel value="links" pt="sm">
-        <Stack gap="xs">
-          {value.links.map((l) => (
-            <Paper key={l.id} withBorder p="xs" radius="sm">
-              <Group justify="space-between" wrap="nowrap">
-                <Stack gap={0}>
-                  <Text size="sm">{l.title || l.url}</Text>
-                  {l.title && (
-                    <Text size="xs" c="dimmed">
-                      {l.url}
-                    </Text>
-                  )}
-                </Stack>
-                <ActionIcon
-                  variant="subtle"
-                  color="red"
-                  onClick={() =>
-                    onChange({
-                      ...value,
-                      links: value.links.filter((x) => x.id !== l.id),
-                    })
-                  }
-                  aria-label="Remove link"
-                >
-                  <IconTrash size={14} />
-                </ActionIcon>
-              </Group>
-            </Paper>
-          ))}
-          <Group align="flex-end" gap="xs">
-            <TextInput
-              label="URL"
-              placeholder="https://…"
-              value={linkUrl}
-              onChange={(e) => setLinkUrl(e.currentTarget.value)}
-              style={{ flex: 1 }}
-              size="xs"
+            <Select
+              label="Source type"
+              data={SOURCE_TYPES}
+              value={source.type}
+              allowDeselect={false}
+              // Switching type resets the type-specific payload.
+              onChange={(v) =>
+                v &&
+                patchSource(source.id, {
+                  type: v as KbSourceType,
+                  files: [],
+                  url: undefined,
+                })
+              }
             />
-            <TextInput
-              label="Title (optional)"
-              value={linkTitle}
-              onChange={(e) => setLinkTitle(e.currentTarget.value)}
-              style={{ flex: 1 }}
-              size="xs"
-            />
-            <Button
-              size="xs"
-              disabled={!linkUrl.trim()}
-              onClick={() => {
-                onChange({
-                  ...value,
-                  links: [
-                    ...value.links,
-                    {
-                      id: createId("kb"),
-                      url: linkUrl.trim(),
-                      title: linkTitle.trim() || undefined,
-                    },
-                  ],
-                });
-                setLinkUrl("");
-                setLinkTitle("");
-              }}
-            >
-              Add
-            </Button>
-          </Group>
-        </Stack>
-      </Tabs.Panel>
 
-      <Tabs.Panel value="snippets" pt="sm">
-        <Stack gap="xs">
-          {value.snippets.map((s) => (
-            <Paper key={s.id} withBorder p="xs" radius="sm">
-              <Group justify="space-between" wrap="nowrap" align="flex-start">
-                <Stack gap={0}>
-                  <Text size="sm" fw={500}>
-                    {s.title}
-                  </Text>
-                  <Text size="xs" c="dimmed" lineClamp={2}>
-                    {s.content}
-                  </Text>
-                </Stack>
-                <ActionIcon
-                  variant="subtle"
-                  color="red"
-                  onClick={() =>
-                    onChange({
-                      ...value,
-                      snippets: value.snippets.filter((x) => x.id !== s.id),
-                    })
-                  }
-                  aria-label="Remove snippet"
+            {source.type === "file" ? (
+              <Stack gap="xs">
+                {source.files.map((f) => (
+                  <Group
+                    key={f.id}
+                    justify="space-between"
+                    wrap="nowrap"
+                    px="xs"
+                    py={6}
+                    style={{
+                      border: "1px solid var(--mantine-color-gray-3)",
+                      borderRadius: 8,
+                    }}
+                  >
+                    <Group gap="xs" wrap="nowrap" style={{ minWidth: 0 }}>
+                      <IconFile size={16} />
+                      <Text size="sm" lineClamp={1}>
+                        {f.name}
+                      </Text>
+                      <Text size="xs" c="dimmed">
+                        {f.sizeLabel}
+                      </Text>
+                    </Group>
+                    <ActionIcon
+                      variant="subtle"
+                      color="red"
+                      onClick={() =>
+                        patchSource(source.id, {
+                          files: source.files.filter((x) => x.id !== f.id),
+                        })
+                      }
+                      aria-label="Remove file"
+                    >
+                      <IconTrash size={14} />
+                    </ActionIcon>
+                  </Group>
+                ))}
+                <Button
+                  component="label"
+                  variant="light"
+                  leftSection={<IconUpload size={14} />}
+                  size="xs"
+                  w="fit-content"
                 >
-                  <IconTrash size={14} />
-                </ActionIcon>
-              </Group>
-            </Paper>
-          ))}
-          <TextInput
-            label="Title"
-            value={snipTitle}
-            onChange={(e) => setSnipTitle(e.currentTarget.value)}
-            size="xs"
-          />
-          <Textarea
-            label="Content"
-            value={snipBody}
-            onChange={(e) => setSnipBody(e.currentTarget.value)}
-            autosize
-            minRows={2}
-            size="xs"
-          />
-          <Button
-            size="xs"
-            w="fit-content"
-            disabled={!snipTitle.trim() || !snipBody.trim()}
-            onClick={() => {
-              onChange({
-                ...value,
-                snippets: [
-                  ...value.snippets,
-                  {
-                    id: createId("kb"),
-                    title: snipTitle.trim(),
-                    content: snipBody.trim(),
-                  },
-                ],
-              });
-              setSnipTitle("");
-              setSnipBody("");
-            }}
-          >
-            Add snippet
-          </Button>
-        </Stack>
-      </Tabs.Panel>
-    </Tabs>
+                  {source.files.length ? "Add more files" : "Upload files"}
+                  <input
+                    type="file"
+                    hidden
+                    multiple
+                    onChange={(e) => {
+                      const files = Array.from(e.currentTarget.files ?? []);
+                      if (files.length) addFiles(source, files);
+                      e.currentTarget.value = "";
+                    }}
+                  />
+                </Button>
+              </Stack>
+            ) : (
+              <TextInput
+                label={
+                  source.type === "google-drive"
+                    ? "Google Drive URL"
+                    : "SharePoint URL"
+                }
+                leftSection={
+                  source.type === "google-drive" ? (
+                    <IconBrandGoogleDrive size={16} />
+                  ) : (
+                    <IconCloud size={16} />
+                  )
+                }
+                placeholder={urlPlaceholder(source.type)}
+                value={source.url ?? ""}
+                onChange={(e) =>
+                  patchSource(source.id, { url: e.currentTarget.value })
+                }
+              />
+            )}
+          </Stack>
+        </Paper>
+      ))}
+
+      <Button
+        variant="light"
+        leftSection={<IconPlus size={16} />}
+        size="sm"
+        w="fit-content"
+        onClick={addSource}
+      >
+        Add source
+      </Button>
+    </Stack>
   );
 }

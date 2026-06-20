@@ -10,12 +10,19 @@ import type {
 } from "@/types";
 import { actions } from "@/lib/store";
 import { renderQuestion } from "@/lib/structured";
+import { streamComplete } from "@/lib/llm";
 import { createId } from "@/lib/id";
 import { summariseTitle } from "@/lib/text";
 import { LoadingState } from "@/components/common/LoadingState";
 import { IntakeQuestionCard } from "./IntakeQuestionCard";
 
-type Status = "idle" | "generating" | "answering" | "error" | "complete";
+type Status =
+  | "idle"
+  | "generating"
+  | "answering"
+  | "processing"
+  | "error"
+  | "complete";
 
 export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
   // Resume point: skip source questions already answered (persisted on the chat).
@@ -38,10 +45,15 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
   // remember answered rendered questions so Back can re-show without re-calling LLM
   const [history, setHistory] = useState<RenderedQuestion[]>([]);
 
+  // After the last answer: the agent acknowledges (with a recap), says it's
+  // processing, then streams an LLM-generated result. We stay mounted (status
+  // "processing", composer stays locked) until the result lands.
   const finish = useCallback(
-    (finalAnswers: IntakeAnswer[]) => {
-      const recap = finalAnswers
-        .filter((a) => !a.skipped)
+    async (finalAnswers: IntakeAnswer[]) => {
+      setStatus("processing");
+
+      const answered = finalAnswers.filter((a) => !a.skipped);
+      const recap = answered
         .map(
           (a) =>
             `• ${a.prompt} — ${[...a.selectedOptionLabels, a.freeText]
@@ -49,32 +61,89 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
               .join(", ")}`
         )
         .join("\n");
-      actions.appendMessage(chat.id, {
-        id: createId("msg"),
-        role: "assistant",
-        content: recap
-          ? `Thanks! Here's what I've got:\n${recap}\n\nHow can I help you with this?`
-          : "Thanks! Let's get started — how can I help?",
-        createdAt: new Date().toISOString(),
-        kind: "intake-summary",
-      });
-      // Summarise the chat title from the intake while it's still "Untitled".
-      const firstAnswer = finalAnswers.find((a) => !a.skipped);
+
+      const appendAssistant = (content: string) =>
+        actions.appendMessage(chat.id, {
+          id: createId("msg"),
+          role: "assistant",
+          content,
+          createdAt: new Date().toISOString(),
+          kind: "text",
+        });
+      const wait = (ms: number) =>
+        new Promise((resolve) => setTimeout(resolve, ms));
+
+      // 1. acknowledgment + recap of what they told us
+      appendAssistant(
+        recap
+          ? `Got it, thanks for those details. Here's what I've noted:\n${recap}`
+          : "Got it, thanks for those details."
+      );
+
+      // Persist answers + chat title now, but keep intake "in progress" so the
+      // composer stays disabled until the result is ready.
+      const firstAnswer = answered[0];
       const titleSeed = firstAnswer
         ? [...firstAnswer.selectedOptionLabels, firstAnswer.freeText]
             .filter(Boolean)
             .join(", ")
         : agent.name;
       actions.updateChat(chat.id, {
-        intakeComplete: true,
         intakeAnswers: finalAnswers,
         ...(chat.title === "Untitled"
           ? { title: summariseTitle(titleSeed) }
           : {}),
       });
+
+      await wait(800);
+
+      // 2. "processing" message
+      appendAssistant("Working on it — putting this together for you now…");
+
+      await wait(400);
+
+      // 3. loading bubble (empty assistant message renders dots) + streamed result
+      const resultId = createId("msg");
+      actions.appendMessage(chat.id, {
+        id: resultId,
+        role: "assistant",
+        content: "",
+        createdAt: new Date().toISOString(),
+        kind: "text",
+      });
+
+      const resultPrompt = `The user completed an intake form with these answers:\n${
+        recap || "(no answers provided)"
+      }\n\nUsing this information, carry out your task and give the user the result now.`;
+
+      try {
+        let acc = "";
+        await streamComplete([{ role: "user", content: resultPrompt }], {
+          system: agent.instructions || undefined,
+          maxTokens: 700,
+          onDelta: (chunk) => {
+            acc += chunk;
+            actions.updateMessage(chat.id, resultId, { content: acc });
+          },
+        });
+        if (!acc) {
+          actions.updateMessage(chat.id, resultId, {
+            content:
+              "Here's a summary based on what you shared. Let me know if you'd like me to adjust anything.",
+          });
+        }
+      } catch {
+        actions.updateMessage(chat.id, resultId, {
+          content:
+            "Sorry — I couldn't generate that just now. You can ask me again below.",
+        });
+      }
+
+      // 4. done — re-enable the composer for follow-ups
+      actions.updateChat(chat.id, { intakeComplete: true });
       setStatus("complete");
     },
-    [chat.id, chat.title, agent.name]
+    [chat.id, chat.title, agent.name, agent.instructions]
   );
 
   // Pull the next question: drain the queue, else render the next source question.
@@ -87,7 +156,7 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
       return;
     }
     if (sourceIndex >= agent.questions.length) {
-      finish(answers);
+      void finish(answers);
       return;
     }
     setStatus("generating");
@@ -176,7 +245,7 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
       </Stack>
     );
   }
-  if (status === "complete" || !current) {
+  if (status === "processing" || status === "complete" || !current) {
     return null;
   }
 

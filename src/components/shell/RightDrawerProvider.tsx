@@ -8,7 +8,6 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import { Drawer } from "@mantine/core";
 
 interface RightDrawerOpts {
   title?: string;
@@ -19,10 +18,18 @@ export interface RightDrawerApi {
   open: (content: ReactNode, opts?: RightDrawerOpts) => void;
   close: () => void;
   isOpen: boolean;
+  content: ReactNode;
+  title?: string;
+  width: number;
 }
 
 const RightDrawerContext = createContext<RightDrawerApi | null>(null);
 
+/**
+ * Holds the right-drawer state. The panel itself is rendered by AppFrame as an
+ * AppShell.Aside so it *pushes* the main content (resizes the layout) rather
+ * than floating over it — see AppFrame.
+ */
 export function RightDrawerProvider({ children }: { children: ReactNode }) {
   const [isOpen, setIsOpen] = useState(false);
   const [content, setContent] = useState<ReactNode>(null);
@@ -39,24 +46,13 @@ export function RightDrawerProvider({ children }: { children: ReactNode }) {
   const close = useCallback(() => setIsOpen(false), []);
 
   const api = useMemo<RightDrawerApi>(
-    () => ({ open, close, isOpen }),
-    [open, close, isOpen]
+    () => ({ open, close, isOpen, content, title, width }),
+    [open, close, isOpen, content, title, width]
   );
 
   return (
     <RightDrawerContext.Provider value={api}>
       {children}
-      <Drawer
-        opened={isOpen}
-        onClose={close}
-        position="right"
-        withOverlay={false}
-        size={width}
-        title={title}
-        keepMounted={false}
-      >
-        {content}
-      </Drawer>
     </RightDrawerContext.Provider>
   );
 }

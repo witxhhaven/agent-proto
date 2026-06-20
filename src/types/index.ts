@@ -50,7 +50,8 @@ export interface McpTool {
 }
 
 // ====================================================================
-// Knowledge base (mocked — files + links + text)
+// Knowledge base (mocked — named sources; each is either uploaded files or a
+// Google Drive / SharePoint URL).
 // ====================================================================
 export interface KbFile {
   id: string;
@@ -58,20 +59,18 @@ export interface KbFile {
   sizeLabel: string;
   kind: "pdf" | "docx" | "txt" | "xlsx" | "csv" | "other";
 }
-export interface KbLink {
+export type KbSourceType = "file" | "google-drive" | "sharepoint";
+export interface KbSource {
   id: string;
-  url: string;
-  title?: string;
-}
-export interface KbSnippet {
-  id: string;
-  title: string;
-  content: string;
+  name: string;
+  type: KbSourceType;
+  /** populated when type === "file" (multiple files allowed per source) */
+  files: KbFile[];
+  /** populated when type === "google-drive" | "sharepoint" */
+  url?: string;
 }
 export interface KnowledgeBase {
-  files: KbFile[];
-  links: KbLink[];
-  snippets: KbSnippet[];
+  sources: KbSource[];
 }
 
 // ====================================================================
@@ -112,6 +111,7 @@ export interface Agent {
   toolIds: string[]; // selected McpTool ids
   questions: IntakeQuestion[]; // MCQ asked at chat start (see intake-questions.md)
   enabled: boolean;
+  published?: boolean; // true once submitted to the Agent Marketplace (Save = draft, Publish = live)
   createdAt: string; // ISO
   // No `schedule` here — scheduling is a separate ScheduledTask that may wrap this agent.
 }

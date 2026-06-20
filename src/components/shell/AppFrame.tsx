@@ -1,9 +1,11 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { AppShell, Burger, Group, Text } from "@mantine/core";
+import { ActionIcon, AppShell, Box, Burger, Group, Text } from "@mantine/core";
+import { IconX } from "@tabler/icons-react";
 import { useDisclosure, useLocalStorage } from "@mantine/hooks";
 import { Sidebar } from "./Sidebar";
+import { useRightDrawer } from "./RightDrawerProvider";
 
 export function AppFrame({ children }: { children: ReactNode }) {
   const [collapsed, setCollapsed] = useLocalStorage<boolean>({
@@ -13,6 +15,7 @@ export function AppFrame({ children }: { children: ReactNode }) {
   });
   const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] =
     useDisclosure(false);
+  const drawer = useRightDrawer();
 
   return (
     <AppShell
@@ -23,6 +26,14 @@ export function AppFrame({ children }: { children: ReactNode }) {
         width: collapsed ? 72 : 264,
         breakpoint: "sm",
         collapsed: { desktop: false, mobile: !mobileOpened },
+      }}
+      // Right drawer rendered as an aside so it PUSHES the main content (resizes
+      // the grid) instead of floating over it. breakpoint 0 keeps it pushing at
+      // every width ("always push").
+      aside={{
+        width: drawer.width,
+        breakpoint: 0,
+        collapsed: { desktop: !drawer.isOpen, mobile: !drawer.isOpen },
       }}
       padding={0}
     >
@@ -38,6 +49,37 @@ export function AppFrame({ children }: { children: ReactNode }) {
       </AppShell.Navbar>
 
       <AppShell.Main className="app-main">{children}</AppShell.Main>
+
+      <AppShell.Aside p={0}>
+        <Box
+          style={{
+            height: "100%",
+            display: "flex",
+            flexDirection: "column",
+          }}
+        >
+          <Group
+            justify="space-between"
+            wrap="nowrap"
+            px="md"
+            py="sm"
+            style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}
+          >
+            <Text fw={600}>{drawer.title ?? "Panel"}</Text>
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              onClick={drawer.close}
+              aria-label="Close panel"
+            >
+              <IconX size={18} />
+            </ActionIcon>
+          </Group>
+          <Box p="md" style={{ flex: 1, overflowY: "auto" }}>
+            {drawer.content}
+          </Box>
+        </Box>
+      </AppShell.Aside>
     </AppShell>
   );
 }

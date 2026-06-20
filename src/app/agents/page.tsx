@@ -14,10 +14,10 @@ import {
   Title,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconPlus } from "@tabler/icons-react";
+import { IconPlus, IconUserCircle, IconBookmark } from "@tabler/icons-react";
 import { actions, useStore } from "@/lib/store";
-import { AgentManageCard } from "@/components/agents/AgentManageCard";
-import { AssistantCard } from "@/components/explore/AssistantCard";
+import tabClasses from "./segmented-tabs.module.css";
+import { AgentCard } from "@/components/common/AgentCard";
 import { EmptyState } from "@/components/common/EmptyState";
 
 const AGENT_CAP = 5;
@@ -26,7 +26,6 @@ export default function AgentsPage() {
   const router = useRouter();
   const agents = useStore((s) => s.agents);
   const assistants = useStore((s) => s.assistants);
-  const scheduledTasks = useStore((s) => s.scheduledTasks);
   const savedAssistants = assistants.filter((a) => a.saved);
 
   const [tab, setTab] = useState<string | null>("created");
@@ -52,36 +51,51 @@ export default function AgentsPage() {
         My Agents
       </Title>
 
-      <Tabs value={tab} onChange={setTab}>
-        <Tabs.List mb="lg">
-          <Tabs.Tab value="created">Created by You</Tabs.Tab>
-          <Tabs.Tab value="saved">
-            Saved Agents ({savedAssistants.length})
-          </Tabs.Tab>
-        </Tabs.List>
+      <Tabs value={tab} onChange={setTab} variant="pills">
+        <Group justify="space-between" align="center" mb="xl" wrap="nowrap">
+          <Tabs.List className={tabClasses.list}>
+            <Tabs.Tab
+              value="created"
+              className={tabClasses.tab}
+              leftSection={<IconUserCircle size={17} stroke={1.8} />}
+            >
+              Created by You
+            </Tabs.Tab>
+            <Tabs.Tab
+              value="saved"
+              className={tabClasses.tab}
+              leftSection={<IconBookmark size={17} stroke={1.8} />}
+            >
+              Saved Agents ({savedAssistants.length})
+            </Tabs.Tab>
+          </Tabs.List>
 
-        {/* Quota + New Agent live below the tabs and only on Created by You. */}
-        {tab === "created" && (
-          <Group justify="space-between" align="center" mb="lg" wrap="nowrap">
-            <Badge
-              variant="light"
-              color={atCap ? "orange" : "gray"}
-              size="lg"
-              radius="sm"
-            >
-              {agents.length}/{AGENT_CAP} agents used
-            </Badge>
-            <Button
-              leftSection={<IconPlus size={16} />}
-              onClick={() => router.push("/agents/new")}
-              disabled={atCap}
-            >
-              New Agent
-            </Button>
-          </Group>
-        )}
+          {/* Quota + New Agent sit to the right of the tabs, only on Created by You. */}
+          {tab === "created" && (
+            <Group align="center" wrap="nowrap">
+              <Badge
+                variant="light"
+                color={atCap ? "orange" : "gray"}
+                size="lg"
+                radius="sm"
+              >
+                {agents.length}/{AGENT_CAP} agents used
+              </Badge>
+              <Button
+                leftSection={<IconPlus size={16} />}
+                onClick={() => router.push("/agents/new")}
+                disabled={atCap}
+              >
+                New Agent
+              </Button>
+            </Group>
+          )}
+        </Group>
 
         <Tabs.Panel value="created">
+          <Text c="dimmed" mb="md">
+            Agents you create are automatically used by Desk in chats and tasks.
+          </Text>
           {agents.length === 0 ? (
             <EmptyState
               title="No agents found"
@@ -94,12 +108,10 @@ export default function AgentsPage() {
           ) : (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
               {agents.map((agent) => (
-                <AgentManageCard
+                <AgentCard
                   key={agent.id}
+                  variant="manage"
                   agent={agent}
-                  scheduleCount={
-                    scheduledTasks.filter((t) => t.agentId === agent.id).length
-                  }
                   onDelete={askDelete}
                 />
               ))}
@@ -109,7 +121,7 @@ export default function AgentsPage() {
 
         <Tabs.Panel value="saved">
           <Text c="dimmed" mb="md">
-            Agents you save here can be used by your Personal AI Assistant.
+            Agents you save here can be used by Desk.
           </Text>
           {savedAssistants.length === 0 ? (
             <EmptyState
@@ -123,7 +135,7 @@ export default function AgentsPage() {
           ) : (
             <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
               {savedAssistants.map((a) => (
-                <AssistantCard key={a.id} assistant={a} />
+                <AgentCard key={a.id} variant="marketplace" assistant={a} />
               ))}
             </SimpleGrid>
           )}

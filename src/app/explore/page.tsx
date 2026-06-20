@@ -14,7 +14,7 @@ import {
 import { IconSearch } from "@tabler/icons-react";
 import type { Assistant, AssistantCategory } from "@/types";
 import { useStore } from "@/lib/store";
-import { AssistantCard } from "@/components/explore/AssistantCard";
+import { AgentCard } from "@/components/common/AgentCard";
 import { EmptyState } from "@/components/common/EmptyState";
 
 const CATEGORIES: AssistantCategory[] = [
@@ -49,7 +49,8 @@ export default function ExplorePage() {
     });
   }, [assistants, q, pill]);
 
-  const roleRow = assistants.filter((a) => a.roleRecommended);
+  // Agents you created blend organically into the "Based on your role" row.
+  const roleRow = assistants.filter((a) => a.roleRecommended || a.isOwned);
   const historyRow = assistants.filter((a) => a.historyRecommended);
 
   return (
@@ -81,12 +82,21 @@ export default function ExplorePage() {
               variant="filled"
               radius="xl"
               styles={{
-                iconWrapper: { display: "none" },
+                // Fully remove the (hidden) checkmark slot so the checked chip
+                // doesn't lose horizontal padding vs the unchecked ones.
+                iconWrapper: {
+                  display: "none",
+                  width: 0,
+                  marginLeft: 0,
+                  marginRight: 0,
+                },
                 label: {
                   fontSize: 14,
                   height: "auto",
                   paddingTop: 9,
                   paddingBottom: 9,
+                  paddingLeft: 16,
+                  paddingRight: 16,
                 },
               }}
             >
@@ -116,7 +126,7 @@ export default function ExplorePage() {
       ) : (
         <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
           {filtered.map((a) => (
-            <AssistantCard key={a.id} assistant={a} />
+            <AgentCard key={a.id} variant="marketplace" assistant={a} />
           ))}
         </SimpleGrid>
       )}
@@ -133,7 +143,7 @@ function CuratedRow({ title, items }: { title: string; items: Assistant[] }) {
       </Text>
       <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
         {items.map((a) => (
-          <AssistantCard key={a.id} assistant={a} />
+          <AgentCard key={a.id} variant="marketplace" assistant={a} />
         ))}
       </SimpleGrid>
     </Stack>

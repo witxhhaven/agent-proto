@@ -61,7 +61,11 @@ export function Sidebar({
   const chats = useStore((s) => s.chats);
   const recentChats = chats.filter((c) => c.messages.length > 0);
   const assistants = useStore((s) => s.assistants);
+  const agents = useStore((s) => s.agents);
   const favourited = assistants.filter((a) => a.favorited).slice(0, 5);
+  // My Agents count: agents you created + assistants you've saved.
+  const myAgentsCount =
+    agents.length + assistants.filter((a) => a.saved).length;
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + "/");
@@ -86,39 +90,48 @@ export function Sidebar({
   }
 
   return (
-    <Stack h="100%" gap={0} p="xs">
-      {/* header row: brand + collapse toggle */}
-      <Group
-        justify={collapsed ? "center" : "space-between"}
-        mb="sm"
-        wrap="nowrap"
+    <Stack h="100%" gap={0}>
+      {/* sticky header: brand + collapse toggle */}
+      <Box
+        px="xs"
+        pt="xs"
+        pb="sm"
+        style={{ borderBottom: "1px solid var(--mantine-color-gray-2)" }}
       >
-        {!collapsed && (
-          <Group gap={6} wrap="nowrap" pl={6}>
-            <Text fw={800} size="md">
-              Desk
-            </Text>
-            <Badge size="xs" variant="light" color="brand-blue" radius="sm">
-              BETA
-            </Badge>
-          </Group>
-        )}
-        <Tooltip label={collapsed ? "Expand" : "Collapse"} position="right">
-          <ActionIcon
-            variant="subtle"
-            color="gray"
-            onClick={onToggle}
-            aria-label="Toggle sidebar"
-          >
-            {collapsed ? (
-              <IconLayoutSidebarLeftExpand size={20} />
-            ) : (
-              <IconLayoutSidebarLeftCollapse size={20} />
-            )}
-          </ActionIcon>
-        </Tooltip>
-      </Group>
+        <Group
+          justify={collapsed ? "center" : "space-between"}
+          wrap="nowrap"
+        >
+          {!collapsed && (
+            <Group gap={6} wrap="nowrap" pl={6}>
+              <Text fw={800} size="md">
+                Desk
+              </Text>
+              <Badge size="xs" variant="light" color="brand-blue" radius="sm">
+                BETA
+              </Badge>
+            </Group>
+          )}
+          <Tooltip label={collapsed ? "Expand" : "Collapse"} position="right">
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              onClick={onToggle}
+              aria-label="Toggle sidebar"
+            >
+              {collapsed ? (
+                <IconLayoutSidebarLeftExpand size={20} />
+              ) : (
+                <IconLayoutSidebarLeftCollapse size={20} />
+              )}
+            </ActionIcon>
+          </Tooltip>
+        </Group>
+      </Box>
 
+      {/* scrollable middle: everything between header and footer */}
+      <ScrollArea style={{ flex: 1 }} type="hover">
+        <Stack gap={0} px="xs" pt="xs">
       {/* New Chat — top primary action */}
       {collapsed ? (
         <Tooltip label="New Chat" position="right">
@@ -138,11 +151,12 @@ export function Sidebar({
         <Button
           component={Link}
           href="/"
-          variant="light"
+          variant="subtle"
           justify="flex-start"
           leftSection={<IconPencilPlus size={16} />}
           mb="sm"
           fullWidth
+          styles={{ root: { borderRadius: 0 } }}
         >
           New Chat
         </Button>
@@ -181,6 +195,7 @@ export function Sidebar({
               </Tooltip>
             );
           }
+          const showCount = item.href === "/agents" && myAgentsCount > 0;
           return (
             <NavLink
               key={item.href}
@@ -188,6 +203,19 @@ export function Sidebar({
               href={item.href}
               label={item.label}
               leftSection={<Icon size={18} />}
+              rightSection={
+                showCount ? (
+                  <Badge
+                    variant="light"
+                    color="gray"
+                    size="sm"
+                    circle
+                    style={{ fontVariantNumeric: "tabular-nums" }}
+                  >
+                    {myAgentsCount}
+                  </Badge>
+                ) : undefined
+              }
               active={active}
             />
           );
@@ -240,7 +268,6 @@ export function Sidebar({
         </Group>
       )}
 
-      <ScrollArea style={{ flex: 1 }} type="hover">
         {recentChats.length === 0
           ? !collapsed && (
               <Text size="xs" c="dimmed" px={8} py={4}>
@@ -275,10 +302,15 @@ export function Sidebar({
                 })}
               </Stack>
             )}
+        </Stack>
       </ScrollArea>
 
-      {/* user profile footer */}
-      <Divider my="xs" />
+      {/* sticky footer: user profile */}
+      <Box
+        px="xs"
+        py="xs"
+        style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}
+      >
       <Menu position="top-start" width={220} withinPortal>
         <Menu.Target>
           {collapsed ? (
@@ -342,6 +374,7 @@ export function Sidebar({
           </Menu.Item>
         </Menu.Dropdown>
       </Menu>
+      </Box>
     </Stack>
   );
 }

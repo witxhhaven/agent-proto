@@ -229,6 +229,94 @@ export async function generateAgentDraft(
 }
 
 // ---------------------------------------------------------------------------
+// 2b. assistAgentChat — conversational AI-assist that fills the form per turn
+// ---------------------------------------------------------------------------
+const AssistChatSchema = z.object({
+  reply: z.string(),
+  name: z.string().optional(),
+  description: z.string().optional(),
+  instructions: z.string().optional(),
+  toolIds: z.array(z.string()).optional(),
+  questions: z.array(IntakeQuestionSchema).optional(),
+});
+export type AssistChatResult = z.infer<typeof AssistChatSchema>;
+
+const ASSIST_CHAT_JSON_SCHEMA = {
+  type: "object",
+  properties: {
+    reply: { type: "string" },
+    name: { type: "string" },
+    description: { type: "string" },
+    instructions: { type: "string" },
+    toolIds: { type: "array", items: { type: "string" } },
+    questions: {
+      type: "array",
+      items: {
+        type: "object",
+        properties: {
+          id: { type: "string" },
+          prompt: { type: "string" },
+          helpText: { type: "string" },
+          allowMultiple: { type: "boolean" },
+        },
+        required: ["id", "prompt"],
+      },
+    },
+  },
+  required: ["reply"],
+};
+
+/**
+ * One conversational turn of the AI-assist agent builder. Each call both (a)
+ * fills in as much of the agent draft as it can from the conversation and (b)
+ * returns a short chat `reply` that asks the creator clarifying questions.
+ * Mock-first: a deterministic reply + draft when no API key is present.
+ */
+export async function assistAgentChat(
+  messages: { role: "user" | "assistant"; content: string }[],
+  currentQuestions: IntakeQuestion[] = []
+): Promise<AssistChatResult> {
+  const toolList = mockTools
+    .map((t) => `${t.id} — ${t.name} (${t.provider})`)
+    .join("\n");
+  const transcript = messages
+    .map((m) => `${m.role === "user" ? "Creator" : "Assistant"}: ${m.content}`)
+    .join("\n");
+
+  const result = await generateStructured({
+    schema: AssistChatSchema,
+    jsonSchema: ASSIST_CHAT_JSON_SCHEMA,
+    toolName: "assist_agent_chat",
+    toolDescription:
+      "Continue a conversation that helps a creator build an AI agent, filling in the agent's draft fields each turn.",
+    system:
+      "You are an assistant that helps a creator build an AI agent through a short back-and-forth. On EVERY turn: (1) fill in as much of the agent draft as you reasonably can from the conversation so far — a name, a one-line description, practical system instructions, relevant tools (from the provided list, by id only), and 2-5 intake questions an end-user should answer before the agent runs; and (2) write a brief, friendly reply of 2-4 sentences, in plain text with no markdown, that notes what you filled in and asks 1-2 specific clarifying questions to improve the agent. Only include draft fields you can sensibly populate. Always include `reply`.",
+    prompt: `Conversation so far:\n${transcript}\n\nAvailable tools (use ids only):\n${toolList}\n\nReturn the updated draft fields and your next reply.`,
+    mock: () => mockAssistChat(messages, currentQuestions),
+  });
+
+  const validIds = new Set(mockTools.map((t) => t.id));
+  return {
+    ...result,
+    toolIds: (result.toolIds ?? []).filter((id) => validIds.has(id)),
+  };
+}
+
+function mockAssistChat(
+  messages: { role: "user" | "assistant"; content: string }[],
+  currentQuestions: IntakeQuestion[]
+): AssistChatResult {
+  const lastUser = [...messages].reverse().find((m) => m.role === "user");
+  const turns = messages.filter((m) => m.role === "user").length;
+  const base = mockAgentDraft(lastUser?.content ?? "", currentQuestions);
+  const reply =
+    turns <= 1
+      ? `I've drafted a starting point for ${base.name} and filled in the description, instructions, and a couple of intake questions on the form. To sharpen it: who are the main users, and what tone should its responses take?`
+      : `Got it — I've updated the draft on the form to reflect that. Are there specific tools or data sources it should use, and is there anything it should avoid doing?`;
+  return { ...base, reply };
+}
+
+// ---------------------------------------------------------------------------
 // 3. extractSchedule — chat + schedule AI-assist
 // ---------------------------------------------------------------------------
 const ExtractScheduleSchema = z.object({
@@ -267,6 +355,19 @@ const EXTRACT_SCHEDULE_JSON_SCHEMA = {
   },
   required: ["isSchedule", "title", "instructionsText", "timing"],
 };
+
+/**
+ * Cheap, synchronous pre-check so a normal chat message doesn't pay for a full
+ * LLM round-trip just to discover it isn't a scheduling request. Only when this
+ * returns true do we call the (slower) LLM extractor.
+ */
+export function looksLikeSchedule(message: string): boolean {
+  return (
+    RECURRENCE_RE.test(message) ||
+    FREQ_RE.test(message) ||
+    /\b(remind|schedule|every day|each day)\b/i.test(message)
+  );
+}
 
 export async function extractSchedule(
   message: string,

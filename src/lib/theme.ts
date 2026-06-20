@@ -155,7 +155,7 @@ export const theme = createTheme({
       defaultProps: { radius: "lg" as const },
     },
     Modal: {
-      defaultProps: { radius: "lg" as const },
+      defaultProps: { radius: "lg" as const, padding: 32 },
     },
   },
 });

@@ -1,5 +1,6 @@
 "use client";
 
+import { useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ActionIcon,
@@ -25,6 +26,7 @@ import type { ScheduledTask } from "@/types";
 import { actions, useStore } from "@/lib/store";
 import { describeTiming } from "@/lib/cron";
 import { instructionToPlainText } from "@/lib/instructions";
+import { ScheduleCreate } from "./ScheduleCreate";
 
 export function ScheduleCard({
   task,
@@ -34,6 +36,7 @@ export function ScheduleCard({
   compact?: boolean;
 }) {
   const router = useRouter();
+  const [editOpen, setEditOpen] = useState(false);
   const agent = useStore((s) =>
     task.agentId ? s.agents.find((a) => a.id === task.agentId) : undefined
   );
@@ -48,6 +51,7 @@ export function ScheduleCard({
   }
 
   return (
+    <>
     <Card withBorder radius="md" padding={compact ? "sm" : "md"}>
       <Group wrap="nowrap" align="flex-start" gap="md">
         <ThemeIcon variant="light" color="brand-blue" radius="xl" size={40}>
@@ -84,21 +88,28 @@ export function ScheduleCard({
               </ActionIcon>
             </Menu.Target>
             <Menu.Dropdown>
-              <Menu.Item leftSection={<IconPencil size={16} />} onClick={open}>
+              <Menu.Item
+                leftSection={<IconPencil size={16} />}
+                onClick={compact ? () => setEditOpen(true) : open}
+              >
                 Edit
               </Menu.Item>
-              <Menu.Item
-                leftSection={<IconPlayerPlay size={16} />}
-                onClick={() => actions.runScheduledTaskNow(task.id)}
-              >
-                Run now
-              </Menu.Item>
-              <Menu.Item
-                leftSection={<IconListDetails size={16} />}
-                onClick={() => router.push(`/scheduled/${task.id}?tab=log`)}
-              >
-                View log
-              </Menu.Item>
+              {!compact && (
+                <>
+                  <Menu.Item
+                    leftSection={<IconPlayerPlay size={16} />}
+                    onClick={() => actions.runScheduledTaskNow(task.id)}
+                  >
+                    Run now
+                  </Menu.Item>
+                  <Menu.Item
+                    leftSection={<IconListDetails size={16} />}
+                    onClick={() => router.push(`/scheduled/${task.id}?tab=log`)}
+                  >
+                    View log
+                  </Menu.Item>
+                </>
+              )}
               <Menu.Divider />
               <Menu.Item
                 color="red"
@@ -112,5 +123,13 @@ export function ScheduleCard({
         </Group>
       </Group>
     </Card>
+    {compact && (
+      <ScheduleCreate
+        opened={editOpen}
+        onClose={() => setEditOpen(false)}
+        task={task}
+      />
+    )}
+    </>
   );
 }
