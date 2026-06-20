@@ -1,9 +1,127 @@
-import { Container, Title } from "@mantine/core";
+"use client";
+
+import { useMemo, useState } from "react";
+import {
+  Chip,
+  Container,
+  Group,
+  SimpleGrid,
+  Stack,
+  Text,
+  TextInput,
+  Title,
+} from "@mantine/core";
+import { IconSearch } from "@tabler/icons-react";
+import type { Assistant, AssistantCategory } from "@/types";
+import { useStore } from "@/lib/store";
+import { AssistantCard } from "@/components/explore/AssistantCard";
+import { EmptyState } from "@/components/common/EmptyState";
+
+const CATEGORIES: AssistantCategory[] = [
+  "Writing",
+  "Research",
+  "Data & Analytics",
+  "Productivity",
+  "Communication",
+];
+
+const PILLS = ["Recommended", "Favourited", "Shared with you", ...CATEGORIES];
 
 export default function ExplorePage() {
+  const assistants = useStore((s) => s.assistants);
+  const [query, setQuery] = useState("");
+  const [pill, setPill] = useState<string>("Recommended");
+
+  const q = query.trim().toLowerCase();
+  const isIdle = pill === "Recommended" && q.length === 0;
+
+  const filtered = useMemo(() => {
+    return assistants.filter((a) => {
+      if (q) {
+        const hay = `${a.name} ${a.description} ${a.tags.join(" ")}`.toLowerCase();
+        if (!hay.includes(q)) return false;
+      }
+      if (pill === "Favourited") return a.favorited;
+      if (pill === "Shared with you") return a.sharedWithYou;
+      if (CATEGORIES.includes(pill as AssistantCategory))
+        return a.category === pill;
+      return true; // Recommended = all
+    });
+  }, [assistants, q, pill]);
+
+  const roleRow = assistants.filter((a) => a.roleRecommended);
+  const historyRow = assistants.filter((a) => a.historyRecommended);
+
   return (
-    <Container size="lg" py="md">
-      <Title order={2}>Explore</Title>
+    <Container size="lg" py="xl">
+      <Stack gap="xs" mb="lg">
+        <Title order={2}>Agent Marketplace</Title>
+        <Text c="dimmed">
+          Discover ready-made agents for everyday work — from drafting email
+          replies to researching the news. Save the ones you use so your Personal
+          AI Assistant can use them to get tasks done.
+        </Text>
+      </Stack>
+
+      <TextInput
+        value={query}
+        onChange={(e) => setQuery(e.currentTarget.value)}
+        placeholder="Search assistants by name, description, or tag"
+        leftSection={<IconSearch size={16} />}
+        mb="md"
+        size="md"
+      />
+
+      <Chip.Group multiple={false} value={pill} onChange={setPill}>
+        <Group gap="xs" mb="xl">
+          {PILLS.map((p) => (
+            <Chip key={p} value={p} variant="filled" radius="sm">
+              {p}
+            </Chip>
+          ))}
+        </Group>
+      </Chip.Group>
+
+      {isIdle ? (
+        <Stack gap="xl">
+          <CuratedRow title="Based on your role" items={roleRow} />
+          <CuratedRow title="Based on your chat history" items={historyRow} />
+        </Stack>
+      ) : filtered.length === 0 ? (
+        <EmptyState
+          title="No assistants match"
+          description="Try a different search or clear the filters."
+          action={{
+            label: "Clear filters",
+            onClick: () => {
+              setQuery("");
+              setPill("Recommended");
+            },
+          }}
+        />
+      ) : (
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
+          {filtered.map((a) => (
+            <AssistantCard key={a.id} assistant={a} />
+          ))}
+        </SimpleGrid>
+      )}
     </Container>
+  );
+}
+
+function CuratedRow({ title, items }: { title: string; items: Assistant[] }) {
+  if (items.length === 0) return null;
+  return (
+    <Stack gap="sm">
+      <Text fw={700} size="lg">
+        {title}
+      </Text>
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
+        {items.map((a) => (
+          <AssistantCard key={a.id} assistant={a} />
+        ))}
+      </SimpleGrid>
+    </Stack>
   );
 }
