@@ -9,6 +9,7 @@ import {
   type AgentDraftState,
 } from "@/components/agents/AgentEditor";
 import { AgentTemplatesModal } from "@/components/agents/AgentTemplatesModal";
+import { withSchedulingQuestion } from "@/data/onboarding";
 import { createId } from "@/lib/id";
 
 function draftFromTemplate(t: AgentTemplate): AgentDraftState {
@@ -21,10 +22,12 @@ function draftFromTemplate(t: AgentTemplate): AgentDraftState {
     instructions: t.defaultInstructions,
     knowledgeBase: { sources: t.defaultKnowledge?.sources ?? [] },
     toolIds: t.defaultToolIds,
-    questions: t.defaultQuestions.map((prompt) => ({
-      id: createId("q"),
-      prompt,
-    })),
+    questions: withSchedulingQuestion(
+      t.defaultQuestions.map((prompt) => ({
+        id: createId("q"),
+        prompt,
+      }))
+    ),
     enabled: true,
     published: false,
   };

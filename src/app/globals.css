@@ -42,6 +42,62 @@ h1, h2, h3,
   max-width: 68ch;
 }
 
+/* Inline @mention instructions field (scheduled tasks). The editable surface is
+   styled to match a Mantine Textarea; mentioned agents render as inline pills. */
+.mention-field {
+  min-height: 84px;
+  width: 100%;
+  border: 1px solid var(--mantine-color-gray-4);
+  border-radius: var(--mantine-radius-sm);
+  padding: 8px 12px;
+  font-size: var(--mantine-font-size-sm);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  background: var(--mantine-color-body);
+}
+.mention-field:focus {
+  outline: none;
+  border-color: var(--mantine-color-brand-blue-5);
+}
+.mention-field:empty::before {
+  content: attr(data-placeholder);
+  color: var(--mantine-color-placeholder, #adb5bd);
+  pointer-events: none;
+}
+.mention-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 8px 1px 2px;
+  border-radius: 999px;
+  background: var(--mantine-color-brand-blue-0);
+  color: var(--mantine-color-brand-blue-7);
+  font-weight: 500;
+  white-space: nowrap;
+  vertical-align: middle;
+  line-height: 1.4;
+}
+.mention-pill-avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  overflow: hidden;
+  flex: none;
+}
+.mention-pill-avatar img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+.mention-pill-avatar svg {
+  width: 11px;
+  height: 11px;
+}
+
 /* Main content surface: lightest gray so cards/panels read above it. */
 .app-main {
   background-color: var(--mantine-color-gray-0);

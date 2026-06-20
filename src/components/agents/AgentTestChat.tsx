@@ -121,7 +121,7 @@ export function AgentTestChat({
         let acc = "";
         await streamComplete([{ role: "user", content: resultPrompt }], {
           system: instructions || undefined,
-          maxTokens: 700,
+          maxTokens: 4096,
           onDelta: (chunk) => {
             acc += chunk;
             updateMsg(resultId, acc);
@@ -222,7 +222,7 @@ export function AgentTestChat({
       let acc = "";
       await streamComplete(history, {
         system: instructions || undefined,
-        maxTokens: 512,
+        maxTokens: 4096,
         onDelta: (chunk) => {
           acc += chunk;
           updateMsg(replyId, acc);

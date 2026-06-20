@@ -16,7 +16,11 @@ import { IconPencil } from "@tabler/icons-react";
 import type { Message } from "@/types";
 import { actions, getState, useStore } from "@/lib/store";
 import { createId } from "@/lib/id";
-import { extractSchedule, looksLikeSchedule } from "@/lib/structured";
+import {
+  extractSchedule,
+  looksLikeSchedule,
+  summariseChatForSchedule,
+} from "@/lib/structured";
 import { streamComplete } from "@/lib/llm";
 import { summariseTitle } from "@/lib/text";
 import { AgentAvatar } from "@/components/common/AgentAvatar";
@@ -124,10 +128,25 @@ export function ChatView({ chatId }: { chatId: string }) {
         const agents = getState().agents.map((a) => ({ id: a.id, name: a.name }));
         const extracted = await extractSchedule(text, agents);
         if (extracted.isSchedule) {
+          // Document the whole conversation into detailed instructions so the
+          // scheduled task captures everything discussed, not just this line.
+          const convo = (getState().chats.find((c) => c.id === chat!.id)?.messages ?? [])
+            .filter((m) => m.role === "user" || m.role === "assistant")
+            .map((m) => ({
+              role:
+                m.role === "assistant"
+                  ? ("assistant" as const)
+                  : ("user" as const),
+              content: m.content,
+            }));
+          const detailed = await summariseChatForSchedule(
+            convo,
+            agent?.name ?? "the assistant"
+          );
           const task = actions.createScheduledTask({
             title: extracted.title,
-            instructions: [{ type: "text", value: extracted.instructionsText }],
-            agentId: extracted.agentId ?? null,
+            instructions: [{ type: "text", value: detailed }],
+            agentId: agent?.id ?? extracted.agentId ?? null,
             knowledgeFileRef: null,
             timing: extracted.timing,
             enabled: true,
@@ -160,7 +179,7 @@ export function ChatView({ chatId }: { chatId: string }) {
         let acc = "";
         await streamComplete(history, {
           system: agent?.instructions || undefined,
-          maxTokens: 512, // cap reply length so it finishes sooner
+          maxTokens: 4096, // allow full-length replies (avoid mid-sentence cut-off)
           onDelta: (chunk) => {
             acc += chunk;
             actions.updateMessage(chat!.id, replyId, { content: acc });

@@ -5,12 +5,20 @@ import { Button, Group, Stack, Text } from "@mantine/core";
 import type {
   Agent,
   Chat,
+  InstructionContent,
   IntakeAnswer,
   RenderedQuestion,
 } from "@/types";
-import { actions } from "@/lib/store";
-import { renderQuestion } from "@/lib/structured";
+import { actions, getState } from "@/lib/store";
+import { SCHEDULING_QUESTION_ID } from "@/data/onboarding";
+import {
+  renderQuestion,
+  extractSchedule,
+  looksLikeSchedule,
+  synthesizeScheduleInstruction,
+} from "@/lib/structured";
 import { streamComplete } from "@/lib/llm";
+import { plainTextToInstruction } from "@/lib/instructions";
 import { createId } from "@/lib/id";
 import { summariseTitle } from "@/lib/text";
 import { LoadingState } from "@/components/common/LoadingState";
@@ -23,6 +31,23 @@ type Status =
   | "processing"
   | "error"
   | "complete";
+
+// Concrete, single-click scheduling options. Each label parses via
+// extractSchedule, so picking one is enough to create a schedule.
+function renderSchedulingQuestion(): RenderedQuestion {
+  return {
+    id: SCHEDULING_QUESTION_ID,
+    prompt: "Would you like to run this on a schedule?",
+    options: [
+      { id: createId("opt"), label: "Every weekday at 8am" },
+      { id: createId("opt"), label: "Daily at 9am" },
+      { id: createId("opt"), label: "Weekly on Mondays at 9am" },
+      { id: createId("opt"), label: "No, run manually" },
+    ],
+    allowFreeText: true,
+    allowMultiple: false,
+  };
+}
 
 export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
   // Resume point: skip source questions already answered (persisted on the chat).
@@ -95,6 +120,86 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
           : {}),
       });
 
+      // If the user answered the onboarding scheduling question with a recurrence,
+      // create a schedule that wraps this agent and surface its card in the chat.
+      const schedAnswer =
+        answered.find((a) => a.questionId === SCHEDULING_QUESTION_ID) ??
+        answered.find((a) => /schedul/i.test(a.prompt));
+      const schedText = schedAnswer
+        ? [...schedAnswer.selectedOptionLabels, schedAnswer.freeText]
+            .filter(Boolean)
+            .join(" ")
+        : "";
+      if (schedText && looksLikeSchedule(schedText)) {
+        try {
+          const extracted = await extractSchedule(
+            schedText,
+            getState().agents.map((a) => ({ id: a.id, name: a.name }))
+          );
+          if (extracted.isSchedule) {
+            // Compose the task instruction from the MCQ answers (AI-synthesized,
+            // mock fallback), excluding the scheduling answer itself.
+            const taskAnswers = answered
+              .filter(
+                (a) =>
+                  a.questionId !== SCHEDULING_QUESTION_ID &&
+                  !/schedul/i.test(a.prompt)
+              )
+              .map((a) => ({
+                prompt: a.prompt,
+                answer: [...a.selectedOptionLabels, a.freeText]
+                  .filter(Boolean)
+                  .join(", "),
+              }));
+            const bodyText = await synthesizeScheduleInstruction(
+              {
+                name: agent.name,
+                description: agent.description,
+                instructions: agent.instructions,
+              },
+              taskAnswers
+            );
+            // Always lead the instructions with an @mention of the agent being
+            // scheduled, followed by the synthesized task text.
+            const body = plainTextToInstruction(
+              bodyText || agent.description,
+              getState().agents
+            );
+            const instructions: InstructionContent = [
+              {
+                type: "agent",
+                agentId: agent.id,
+                name: agent.name,
+                iconName: agent.iconName,
+                bgColor: agent.bgColor,
+              },
+              { type: "text", value: " " },
+              ...body,
+            ];
+            const newTask = actions.createScheduledTask({
+              title: extracted.title || `${agent.name} — scheduled run`,
+              instructions,
+              agentId: agent.id,
+              knowledgeFileRef: null,
+              timing: extracted.timing,
+              enabled: true,
+              origin: "chat",
+            });
+            actions.appendMessage(chat.id, {
+              id: createId("msg"),
+              role: "assistant",
+              content: "I've also set this up to run on a schedule:",
+              createdAt: new Date().toISOString(),
+              kind: "schedule-card",
+              scheduledTaskId: newTask.id,
+            });
+            await wait(400);
+          }
+        } catch {
+          // scheduling is best-effort — never block the intake result
+        }
+      }
+
       await wait(800);
 
       // 2. "processing" message
@@ -143,7 +248,16 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
       actions.updateChat(chat.id, { intakeComplete: true });
       setStatus("complete");
     },
-    [chat.id, chat.title, agent.name, agent.instructions]
+    [
+      chat.id,
+      chat.title,
+      agent.id,
+      agent.name,
+      agent.description,
+      agent.instructions,
+      agent.iconName,
+      agent.bgColor,
+    ]
   );
 
   // Pull the next question: drain the queue, else render the next source question.
@@ -157,6 +271,17 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
     }
     if (sourceIndex >= agent.questions.length) {
       void finish(answers);
+      return;
+    }
+    const source = agent.questions[sourceIndex];
+    // The onboarding scheduling question is rendered deterministically with
+    // concrete, parseable options so it always appears (even when the real LLM
+    // would otherwise reword it). The chosen answer is still parsed by AI.
+    if (source.id === SCHEDULING_QUESTION_ID) {
+      setSourceIndex((i) => i + 1);
+      setQueue([]);
+      setCurrent(renderSchedulingQuestion());
+      setStatus("answering");
       return;
     }
     setStatus("generating");

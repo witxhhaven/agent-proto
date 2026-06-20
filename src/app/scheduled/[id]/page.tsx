@@ -40,7 +40,6 @@ export default function ScheduleDetailPage({
     task
       ? {
           title: task.title,
-          mode: task.agentId ? "agent" : "standalone",
           agentId: task.agentId,
           instructions: task.instructions,
           knowledgeFileRef: task.knowledgeFileRef ?? null,
@@ -76,7 +75,7 @@ export default function ScheduleDetailPage({
     }
     actions.updateScheduledTask(id, {
       title: draft.title.trim(),
-      agentId: draft.mode === "agent" ? draft.agentId : null,
+      agentId: draft.agentId,
       instructions: draft.instructions,
       knowledgeFileRef: draft.knowledgeFileRef,
       timing: draft.timing,

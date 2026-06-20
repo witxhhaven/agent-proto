@@ -8,14 +8,12 @@ import {
   Button,
   Card,
   Container,
-  Divider,
   Group,
   Modal,
   Stack,
   Tabs,
   Text,
   TextInput,
-  Textarea,
   ThemeIcon,
   Tooltip,
 } from "@mantine/core";
@@ -37,10 +35,12 @@ import { IconColorPicker } from "./IconColorPicker";
 import { KnowledgeBaseField } from "./KnowledgeBaseField";
 import { ToolsSelect } from "./ToolsSelect";
 import { QuestionsEditor } from "./QuestionsEditor";
+import { AgentInstructionsInput } from "./AgentInstructionsInput";
 import { AgentTestChat } from "./AgentTestChat";
 import { AiAssistDrawer } from "./AiAssistDrawer";
 import tabClasses from "@/app/agents/segmented-tabs.module.css";
 import type { AgentDraft } from "@/lib/agentDraft";
+import { withSchedulingQuestion } from "@/data/onboarding";
 import { createId } from "@/lib/id";
 
 export interface AgentDraftState {
@@ -69,7 +69,8 @@ export function emptyDraft(): AgentDraftState {
     instructions: "",
     knowledgeBase: { sources: [] },
     toolIds: [],
-    questions: [],
+    // New agents are seeded with the (editable, removable) scheduling question.
+    questions: withSchedulingQuestion([]),
     enabled: true,
     published: false,
   };
@@ -124,8 +125,10 @@ export function AgentEditor({
       description: ai.description ?? d.description,
       instructions: ai.instructions ?? d.instructions,
       toolIds: ai.toolIds && ai.toolIds.length ? ai.toolIds : d.toolIds,
-      questions:
-        ai.questions && ai.questions.length ? ai.questions : d.questions,
+      // Keep the scheduling question seeded even when the AI replaces the set.
+      questions: withSchedulingQuestion(
+        ai.questions && ai.questions.length ? ai.questions : d.questions
+      ),
     }));
   }
 
@@ -341,10 +344,9 @@ export function AgentEditor({
               )}
 
               <SectionHeader
-                icon={<IconId size={22} />}
+                icon={<IconId size={26} />}
                 label="Profile"
-                description="How the agent appears in the marketplace and chats."
-                withLine={false}
+                first
               />
 
               <Field label="Agent name" required>
@@ -373,21 +375,17 @@ export function AgentEditor({
               </Field>
 
               <SectionHeader
-                icon={<IconBrain size={22} />}
+                icon={<IconBrain size={26} />}
                 label="Capabilities"
-                description="What the agent knows and can do."
               />
 
               <Field
                 label="Instructions"
-                description="Tell the agent how to behave, its tone, and what to do."
+                description="Tell the agent how to behave, its tone, and what to do. Type @ to mention another agent."
               >
-                <Textarea
-                  placeholder="Describe how the agent should behave…"
+                <AgentInstructionsInput
                   value={draft.instructions}
-                  onChange={(e) => patch({ instructions: e.currentTarget.value })}
-                  autosize
-                  minRows={4}
+                  onChange={(instructions) => patch({ instructions })}
                 />
               </Field>
 
@@ -412,9 +410,8 @@ export function AgentEditor({
               </Field>
 
               <SectionHeader
-                icon={<IconMessageQuestion size={22} />}
+                icon={<IconMessageQuestion size={26} />}
                 label="Onboarding"
-                description="What the agent asks users when a chat starts."
               />
 
               <Field
@@ -474,31 +471,21 @@ export function AgentEditor({
 function SectionHeader({
   icon,
   label,
-  description,
-  withLine = true,
+  first = false,
 }: {
   icon: React.ReactNode;
   label: string;
-  description?: string;
-  withLine?: boolean;
+  first?: boolean;
 }) {
   return (
-    <Stack gap={4} mt="sm">
-      {withLine && <Divider />}
-      <Group gap={8} wrap="nowrap" mt={withLine ? 4 : 0}>
-        <ThemeIcon variant="transparent" color="brand-blue" size="lg" p={0}>
-          {icon}
-        </ThemeIcon>
-        <Text fw={700} size="lg">
-          {label}
-        </Text>
-      </Group>
-      {description && (
-        <Text size="sm" c="dimmed">
-          {description}
-        </Text>
-      )}
-    </Stack>
+    <Group gap={8} wrap="nowrap" mt={first ? 0 : "xl"}>
+      <ThemeIcon variant="transparent" color="indigo" size="xl" p={0}>
+        {icon}
+      </ThemeIcon>
+      <Text fw={700} size="xl" c="indigo">
+        {label}
+      </Text>
+    </Group>
   );
 }
 

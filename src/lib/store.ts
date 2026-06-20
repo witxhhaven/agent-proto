@@ -13,6 +13,7 @@ import { createId } from "@/lib/id";
 import { mockAssistants } from "@/data/mockAssistants";
 import { seedAgents } from "@/data/mockAgents";
 import { seedScheduledTasks } from "@/data/mockSchedules";
+import { withSchedulingQuestion } from "@/data/onboarding";
 
 // v2: knowledge base reshaped to named sources (file upload / Drive / SharePoint).
 const KEY = "prototype:v2";
@@ -57,6 +58,8 @@ function seedState(): StoreState {
   const agents = clone(seedAgents).map((a) => ({
     ...a,
     published: a.published ?? true,
+    // Demo seed agents get the scheduling question seeded, same as creator agents.
+    questions: withSchedulingQuestion(a.questions),
   }));
   return {
     assistants: [
@@ -93,16 +96,28 @@ function ensureHydrated() {
   hydrated = true;
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (raw) {
-      state = JSON.parse(raw) as StoreState;
-    } else {
-      // first visit — seed a fresh, isolated copy and persist it
-      state = seedState();
-      persist();
-    }
+    state = ensureSeedScheduling(
+      raw ? (JSON.parse(raw) as StoreState) : seedState()
+    );
+    persist();
   } catch {
     state = seedState();
   }
+}
+
+// Demo seed agents always keep the scheduling question, even if an older
+// persisted state predates it. Scoped to seed-agent ids only, so creator agents
+// that deliberately removed the question are left untouched (WYSIWYG).
+const SEED_AGENT_IDS = new Set(seedAgents.map((a) => a.id));
+function ensureSeedScheduling(s: StoreState): StoreState {
+  return {
+    ...s,
+    agents: s.agents.map((a) =>
+      SEED_AGENT_IDS.has(a.id)
+        ? { ...a, questions: withSchedulingQuestion(a.questions ?? []) }
+        : a
+    ),
+  };
 }
 
 function emit() {
