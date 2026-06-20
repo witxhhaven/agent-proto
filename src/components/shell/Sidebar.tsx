@@ -4,27 +4,36 @@ import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
 import {
   ActionIcon,
+  Badge,
   Box,
   Button,
   Divider,
   Group,
+  Menu,
   NavLink,
   ScrollArea,
   Stack,
   Text,
   Tooltip,
+  UnstyledButton,
 } from "@mantine/core";
+import { notifications } from "@mantine/notifications";
 import {
   IconCompass,
   IconRobot,
   IconClock,
+  IconPlug,
+  IconFolderPlus,
   IconLayoutSidebarLeftCollapse,
   IconLayoutSidebarLeftExpand,
-  IconPlus,
+  IconPencilPlus,
   IconMessage,
-  IconMessagePlus,
+  IconInfoCircle,
+  IconRefresh,
+  IconSelector,
 } from "@tabler/icons-react";
 import { actions, useStore } from "@/lib/store";
+import { AgentAvatar } from "@/components/common/AgentAvatar";
 
 interface NavItem {
   label: string;
@@ -33,7 +42,8 @@ interface NavItem {
 }
 
 const NAV: NavItem[] = [
-  { label: "Explore", href: "/explore", icon: IconCompass },
+  { label: "Connectors", href: "/connectors", icon: IconPlug },
+  { label: "Agent Marketplace", href: "/explore", icon: IconCompass },
   { label: "My Agents", href: "/agents", icon: IconRobot },
   { label: "Scheduled", href: "/scheduled", icon: IconClock },
 ];
@@ -47,27 +57,59 @@ export function Sidebar({
 }) {
   const router = useRouter();
   const pathname = usePathname();
+  // Only chats with at least one message are surfaced in Recent Chats.
   const chats = useStore((s) => s.chats);
+  const recentChats = chats.filter((c) => c.messages.length > 0);
+  const assistants = useStore((s) => s.assistants);
+  const favourited = assistants.filter((a) => a.favorited).slice(0, 5);
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + "/");
 
-  function newChat() {
-    const chat = actions.createChat({ agentId: null, title: "New chat" });
+  function startChatWith(assistantId: string, name: string) {
+    const chat = actions.createChat({
+      agentId: assistantId,
+      title: `Chat with ${name}`,
+      assistantName: name,
+    });
     router.push(`/chat/${chat.id}`);
+  }
+
+  function resetDemo() {
+    actions.reset();
+    notifications.show({
+      title: "Demo data reset",
+      message: "All agents, schedules, and chats were restored to seed data.",
+      color: "indigo",
+    });
+    router.push("/");
   }
 
   return (
     <Stack h="100%" gap={0} p="xs">
       {/* header row: brand + collapse toggle */}
-      <Group justify={collapsed ? "center" : "space-between"} mb="xs" wrap="nowrap">
+      <Group
+        justify={collapsed ? "center" : "space-between"}
+        mb="sm"
+        wrap="nowrap"
+      >
         {!collapsed && (
-          <Text fw={700} size="sm" pl={6}>
-            Agent Studio
-          </Text>
+          <Group gap={6} wrap="nowrap" pl={6}>
+            <Text fw={800} size="md">
+              Desk
+            </Text>
+            <Badge size="xs" variant="light" color="indigo" radius="sm">
+              BETA
+            </Badge>
+          </Group>
         )}
         <Tooltip label={collapsed ? "Expand" : "Collapse"} position="right">
-          <ActionIcon variant="subtle" color="gray" onClick={onToggle} aria-label="Toggle sidebar">
+          <ActionIcon
+            variant="subtle"
+            color="gray"
+            onClick={onToggle}
+            aria-label="Toggle sidebar"
+          >
             {collapsed ? (
               <IconLayoutSidebarLeftExpand size={20} />
             ) : (
@@ -77,35 +119,48 @@ export function Sidebar({
         </Tooltip>
       </Group>
 
-      {/* create agent */}
+      {/* New Chat — top primary action */}
       {collapsed ? (
-        <Tooltip label="Create agent" position="right">
+        <Tooltip label="New Chat" position="right">
           <ActionIcon
             component={Link}
-            href="/agents/new"
+            href="/"
             variant="filled"
             size="lg"
             mx="auto"
             mb="sm"
-            aria-label="Create agent"
+            aria-label="New Chat"
           >
-            <IconPlus size={18} />
+            <IconPencilPlus size={18} />
           </ActionIcon>
         </Tooltip>
       ) : (
         <Button
           component={Link}
-          href="/agents/new"
-          leftSection={<IconPlus size={16} />}
+          href="/"
+          variant="light"
+          justify="flex-start"
+          leftSection={<IconPencilPlus size={16} />}
           mb="sm"
           fullWidth
         >
-          Create agent
+          New Chat
         </Button>
       )}
 
+      {/* New Project — disabled stub */}
+      {!collapsed && (
+        <Tooltip label="Coming soon" position="right">
+          <NavLink
+            label="New Project (Coming Soon)"
+            leftSection={<IconFolderPlus size={18} />}
+            disabled
+          />
+        </Tooltip>
+      )}
+
       {/* main nav */}
-      <Stack gap={2}>
+      <Stack gap={2} mt={collapsed ? 0 : 2}>
         {NAV.map((item) => {
           const Icon = item.icon;
           const active = isActive(item.href);
@@ -139,82 +194,149 @@ export function Sidebar({
         })}
       </Stack>
 
+      {/* Favourited Agents */}
+      {!collapsed && favourited.length > 0 && (
+        <>
+          <Divider my="sm" />
+          <Text size="xs" fw={600} c="dimmed" tt="uppercase" px={8} mb={4}>
+            Favourited Agents
+          </Text>
+          <Stack gap={2}>
+            {favourited.map((a) => (
+              <NavLink
+                key={a.id}
+                label={a.name}
+                leftSection={
+                  <AgentAvatar iconName={a.iconName} bgColor={a.bgColor} size={22} />
+                }
+                onClick={() => startChatWith(a.id, a.name)}
+              />
+            ))}
+          </Stack>
+        </>
+      )}
+
       <Divider my="sm" />
 
-      {/* chats section */}
-      <Group justify="space-between" px={collapsed ? 0 : 8} mb={4} wrap="nowrap">
-        {!collapsed && (
+      {/* Recent Chats */}
+      {!collapsed && (
+        <Group gap={6} px={8} mb={4} wrap="nowrap">
           <Text size="xs" fw={600} c="dimmed" tt="uppercase">
-            Chats
+            Recent Chats
           </Text>
-        )}
-        <Tooltip label="New chat" position="right">
-          <ActionIcon
-            variant="subtle"
-            color="gray"
-            size="sm"
-            mx={collapsed ? "auto" : undefined}
-            onClick={newChat}
-            aria-label="New chat"
+          <Tooltip
+            label="Chats appear here after your first message"
+            position="right"
+            multiline
+            w={200}
           >
-            <IconMessagePlus size={16} />
-          </ActionIcon>
-        </Tooltip>
-      </Group>
+            <IconInfoCircle size={13} color="var(--mantine-color-dimmed)" />
+          </Tooltip>
+        </Group>
+      )}
 
       <ScrollArea style={{ flex: 1 }} type="hover">
-        {chats.length === 0 ? (
-          !collapsed && (
-            <Text size="xs" c="dimmed" px={8} py={4}>
-              No chats yet.
-            </Text>
-          )
-        ) : (
-          <Stack gap={2}>
-            {chats.map((chat) => {
-              const active = isActive(`/chat/${chat.id}`);
-              if (collapsed) {
-                return (
-                  <Tooltip key={chat.id} label={chat.title} position="right">
-                    <ActionIcon
+        {recentChats.length === 0
+          ? !collapsed && (
+              <Text size="xs" c="dimmed" px={8} py={4}>
+                No chats yet.
+              </Text>
+            )
+          : !collapsed && (
+              <Stack gap={2}>
+                {recentChats.map((chat) => {
+                  const active = isActive(`/chat/${chat.id}`);
+                  return (
+                    <NavLink
+                      key={chat.id}
                       component={Link}
                       href={`/chat/${chat.id}`}
-                      variant={active ? "light" : "subtle"}
-                      color={active ? undefined : "gray"}
-                      size="lg"
-                      mx="auto"
-                      aria-label={chat.title}
-                    >
-                      <IconMessage size={18} />
-                    </ActionIcon>
-                  </Tooltip>
-                );
-              }
-              return (
-                <NavLink
-                  key={chat.id}
-                  component={Link}
-                  href={`/chat/${chat.id}`}
-                  active={active}
-                  label={
-                    <Box>
-                      <Text size="sm" lineClamp={1}>
-                        {chat.title}
-                      </Text>
-                      {chat.assistantName && (
-                        <Text size="xs" c="dimmed" lineClamp={1}>
-                          {chat.assistantName}
-                        </Text>
-                      )}
-                    </Box>
-                  }
-                  leftSection={<IconMessage size={16} />}
-                />
-              );
-            })}
-          </Stack>
-        )}
+                      active={active}
+                      label={
+                        <Box>
+                          <Text size="sm" lineClamp={1}>
+                            {chat.title}
+                          </Text>
+                          {chat.assistantName && (
+                            <Text size="xs" c="dimmed" lineClamp={1}>
+                              {chat.assistantName}
+                            </Text>
+                          )}
+                        </Box>
+                      }
+                      leftSection={<IconMessage size={16} />}
+                    />
+                  );
+                })}
+              </Stack>
+            )}
       </ScrollArea>
+
+      {/* user profile footer */}
+      <Divider my="xs" />
+      <Menu position="top-start" width={220} withinPortal>
+        <Menu.Target>
+          {collapsed ? (
+            <Tooltip label="Alvin LEU (GOVTECH)" position="right">
+              <ActionIcon variant="subtle" color="gray" size="lg" mx="auto" aria-label="Account">
+                <Box
+                  w={28}
+                  h={28}
+                  style={{
+                    borderRadius: 999,
+                    background: "#111827",
+                    color: "white",
+                    display: "grid",
+                    placeItems: "center",
+                    fontSize: 12,
+                    fontWeight: 700,
+                  }}
+                >
+                  A
+                </Box>
+              </ActionIcon>
+            </Tooltip>
+          ) : (
+            <UnstyledButton
+              p={6}
+              style={{ borderRadius: 8 }}
+              aria-label="Account menu"
+            >
+              <Group gap="sm" wrap="nowrap">
+                <Box
+                  w={32}
+                  h={32}
+                  style={{
+                    borderRadius: 999,
+                    background: "#111827",
+                    color: "white",
+                    display: "grid",
+                    placeItems: "center",
+                    fontSize: 13,
+                    fontWeight: 700,
+                    flexShrink: 0,
+                  }}
+                >
+                  A
+                </Box>
+                <Text size="sm" fw={500} lineClamp={1} style={{ flex: 1 }}>
+                  Alvin LEU (GOVTECH)
+                </Text>
+                <IconSelector size={16} color="var(--mantine-color-dimmed)" />
+              </Group>
+            </UnstyledButton>
+          )}
+        </Menu.Target>
+        <Menu.Dropdown>
+          <Menu.Label>Alvin LEU (GOVTECH)</Menu.Label>
+          <Menu.Item
+            leftSection={<IconRefresh size={16} />}
+            onClick={resetDemo}
+          >
+            Reset demo data
+          </Menu.Item>
+        </Menu.Dropdown>
+      </Menu>
     </Stack>
   );
 }

@@ -1,17 +1,8 @@
 "use client";
 
 import type { ReactNode } from "react";
-import {
-  AppShell,
-  Burger,
-  Button,
-  Group,
-  Text,
-} from "@mantine/core";
+import { AppShell, Burger, Group, Text } from "@mantine/core";
 import { useDisclosure, useLocalStorage } from "@mantine/hooks";
-import { notifications } from "@mantine/notifications";
-import { IconRefresh } from "@tabler/icons-react";
-import { actions } from "@/lib/store";
 import { Sidebar } from "./Sidebar";
 
 export function AppFrame({ children }: { children: ReactNode }) {
@@ -23,48 +14,22 @@ export function AppFrame({ children }: { children: ReactNode }) {
   const [mobileOpened, { toggle: toggleMobile, close: closeMobile }] =
     useDisclosure(false);
 
-  function resetDemo() {
-    actions.reset();
-    notifications.show({
-      title: "Demo data reset",
-      message: "All agents, schedules, and chats were restored to seed data.",
-      color: "indigo",
-    });
-  }
-
   return (
     <AppShell
-      header={{ height: 52 }}
+      // No header on desktop (the screenshots have no top bar); a slim one on
+      // mobile carries the burger to open the navbar.
+      header={{ height: { base: 52, sm: 0 } }}
       navbar={{
-        width: collapsed ? 64 : 260,
+        width: collapsed ? 72 : 264,
         breakpoint: "sm",
         collapsed: { desktop: false, mobile: !mobileOpened },
       }}
-      padding="md"
+      padding={0}
     >
-      <AppShell.Header>
-        <Group h="100%" px="md" justify="space-between" wrap="nowrap">
-          <Group gap="sm" wrap="nowrap">
-            <Burger
-              opened={mobileOpened}
-              onClick={toggleMobile}
-              hiddenFrom="sm"
-              size="sm"
-            />
-            <Text fw={700}>Agent Studio</Text>
-            <Text size="xs" c="dimmed" visibleFrom="sm">
-              prototype
-            </Text>
-          </Group>
-          <Button
-            variant="subtle"
-            color="gray"
-            size="xs"
-            leftSection={<IconRefresh size={14} />}
-            onClick={resetDemo}
-          >
-            Reset demo data
-          </Button>
+      <AppShell.Header hiddenFrom="sm">
+        <Group h="100%" px="md" gap="sm" wrap="nowrap">
+          <Burger opened={mobileOpened} onClick={toggleMobile} size="sm" />
+          <Text fw={700}>Desk</Text>
         </Group>
       </AppShell.Header>
 
