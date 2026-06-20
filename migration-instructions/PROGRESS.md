@@ -14,8 +14,8 @@ from the first unchecked item.
 - [x] **conventions.md** — Next.js scaffolded into current folder; Mantine + deps installed; `/`
   redirects to `/explore`; `createId` + EmptyState/LoadingState/ErrorState compile. _(needs human flow-check)_
 - [x] **data-models.md** — `src/types/index.ts` compiles; all types importable via `@/types`.
-- [ ] **mock-data.md** — store hydrates with 2 agents, 2 scheduled tasks (incl. Biology newsletter),
-  ~12 assistants, 15 tools, icon/color presets; mutations persist; `reset()` works; no SSR/hydration errors.
+- [x] **mock-data.md** — store hydrates with 2 agents, 2 scheduled tasks (incl. Biology newsletter),
+  ~12 assistants, 15 tools, icon/color presets; mutations persist; `reset()` works; no SSR/hydration errors. _(needs human flow-check)_
 - [ ] **app-shell.md** — collapsible sidebar (state persists); active nav highlight; Chats section
   live; right drawer opens/closes from any page.
 
