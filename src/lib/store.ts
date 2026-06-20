@@ -38,6 +38,7 @@ export function deriveAssistant(agent: Agent): Assistant {
     bgColor: agent.bgColor,
     uses: 0,
     type: "Developer",
+    classification: "CCE/SN",
     isOwned: true,
   };
 }
@@ -267,7 +268,7 @@ export const actions = {
       id: createId("chat"),
       title: input.title,
       agentId: input.agentId,
-      assistantName: input.assistantName,
+      assistantName: input.assistantName ?? "My AI Assistant",
       messages: [],
       createdAt: new Date().toISOString(),
     };
@@ -299,6 +300,16 @@ export const actions = {
       ...state,
       assistants: state.assistants.map((a) =>
         a.id === assistantId ? { ...a, favorited: !a.favorited } : a
+      ),
+    });
+  },
+
+  // "Save to My Agents" / "Remove from My Agents" (Saved Agents tab)
+  toggleSaved(assistantId: string): void {
+    setState({
+      ...state,
+      assistants: state.assistants.map((a) =>
+        a.id === assistantId ? { ...a, saved: !a.saved } : a
       ),
     });
   },

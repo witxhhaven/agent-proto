@@ -1,14 +1,57 @@
 import type { Agent, AgentTemplate } from "@/types";
 
+// The four templates shown in the "What would you like to automate?" modal, plus scratch.
 export const agentTemplates: AgentTemplate[] = [
   {
+    id: "qa-chatbot",
+    name: "Q&A Chatbot",
+    shortDescription: "Answers staff questions from your policies and SOPs.",
+    description:
+      "Answers staff questions grounded in your policies, SOPs, and knowledge base, with citations.",
+    iconName: "IconMessage",
+    bgColor: "#4F46E5",
+    defaultInstructions:
+      "You answer staff questions using only the provided knowledge base. Cite the source for each answer, and say clearly when something is not covered rather than guessing.",
+    defaultToolIds: ["g_drive_search", "g_drive_read"],
+    defaultQuestions: [
+      "Which knowledge sources should answers draw from?",
+      "What should happen when an answer isn't in the knowledge base?",
+    ],
+    defaultKnowledge: {
+      snippets: [
+        {
+          id: "kb_qa_scope",
+          title: "Answer scope",
+          content:
+            "Only answer from approved policy documents. Escalate anything outside scope.",
+        },
+      ],
+    },
+  },
+  {
+    id: "meeting-minutes",
+    name: "Meeting Minutes Writer",
+    shortDescription: "Turns meeting notes into clear, shareable minutes.",
+    description:
+      "Turns raw meeting notes or transcripts into clear, shareable minutes with decisions and action items.",
+    iconName: "IconFileText",
+    bgColor: "#0EA5E9",
+    defaultInstructions:
+      "You write meeting minutes. Capture attendees, key decisions, and action items with owners. Keep it concise and neutral; flag anything that needs follow-up.",
+    defaultToolIds: ["g_docs_create"],
+    defaultQuestions: [
+      "What format should the minutes follow?",
+      "Who is the audience for these minutes?",
+    ],
+  },
+  {
     id: "email-reply",
-    name: "Email Reply Assistant",
-    shortDescription: "Draft replies in a consistent tone.",
+    name: "Email Reply Drafter",
+    shortDescription: "Drafts replies to incoming emails in your tone.",
     description:
       "Reads an incoming email and drafts a reply in the tone and style you specify.",
     iconName: "IconMail",
-    bgColor: "#4F46E5",
+    bgColor: "#2563EB",
     defaultInstructions:
       "You draft email replies. Match the requested tone, keep replies concise, and always end with a clear next step. Ask for clarification if the incoming email is ambiguous.",
     defaultToolIds: ["g_gmail_send", "g_gmail_search"],
@@ -27,35 +70,19 @@ export const agentTemplates: AgentTemplate[] = [
     },
   },
   {
-    id: "current-affairs",
-    name: "Current Affairs Brief",
-    shortDescription: "A daily briefing on chosen topics.",
+    id: "document-summariser",
+    name: "Document Summariser",
+    shortDescription: "Condenses long reports and circulars into key points.",
     description:
-      "Compiles a short briefing on the topics you follow, with a neutral summary of each.",
-    iconName: "IconNews",
-    bgColor: "#2563EB",
-    defaultInstructions:
-      "You produce concise current-affairs briefings. Group items by topic, summarize neutrally in 2-3 sentences, and flag anything that needs the reader's attention.",
-    defaultToolIds: ["g_drive_search"],
-    defaultQuestions: [
-      "Which topics should the briefing cover?",
-      "How long should the briefing be?",
-    ],
-  },
-  {
-    id: "research-digest",
-    name: "Research Digest",
-    shortDescription: "Summarize sources into a digest.",
-    description:
-      "Gathers sources on a question and returns a structured, cited digest.",
+      "Condenses long reports, circulars, and papers into key points and a short executive summary.",
     iconName: "IconSearch",
     bgColor: "#9333EA",
     defaultInstructions:
-      "You build research digests. Organize findings by theme, cite sources inline, and end with open questions. Prefer primary sources.",
-    defaultToolIds: ["g_drive_search", "g_drive_read", "g_docs_create"],
+      "You summarise long documents. Lead with a 2-3 sentence executive summary, then bullet the key points and any decisions or risks. Preserve figures and dates accurately.",
+    defaultToolIds: ["g_drive_search", "g_drive_read"],
     defaultQuestions: [
-      "What is the research question?",
-      "What depth of detail do you need?",
+      "How long should the summary be?",
+      "What should the summary emphasise?",
     ],
   },
   {
@@ -114,7 +141,7 @@ export const seedAgents: Agent[] = [
   },
   {
     id: "agent_market_pulse",
-    templateId: "research-digest",
+    templateId: "document-summariser",
     name: "Market Pulse",
     description: "Weekly research digest on your watchlist of markets.",
     iconName: "IconChartBar",
