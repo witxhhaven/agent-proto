@@ -1,11 +1,27 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { ActionIcon, Badge, Button, Card, Group, Stack, Text } from "@mantine/core";
-import { IconHeart, IconHeartFilled } from "@tabler/icons-react";
+import {
+  ActionIcon,
+  Badge,
+  Button,
+  Card,
+  Group,
+  Stack,
+  Text,
+  Tooltip,
+} from "@mantine/core";
+import {
+  IconHeart,
+  IconHeartFilled,
+  IconInfoCircle,
+} from "@tabler/icons-react";
 import type { Assistant } from "@/types";
 import { actions } from "@/lib/store";
 import { AgentAvatar } from "@/components/common/AgentAvatar";
+
+const SAVE_TOOLTIP =
+  "Saved agents are available to your Personal AI Assistant to use in chats and tasks.";
 
 export function AssistantCard({ assistant }: { assistant: Assistant }) {
   const router = useRouter();
@@ -13,7 +29,7 @@ export function AssistantCard({ assistant }: { assistant: Assistant }) {
   function startChat() {
     const chat = actions.createChat({
       agentId: assistant.isOwned ? assistant.id : null,
-      title: `Chat with ${assistant.name}`,
+      title: "Untitled",
       assistantName: assistant.name,
     });
     router.push(`/chat/${chat.id}`);
@@ -57,19 +73,37 @@ export function AssistantCard({ assistant }: { assistant: Assistant }) {
 
         {assistant.saved ? (
           <Button
-            variant="default"
+            variant="outline"
             color="red"
+            size="sm"
+            radius="md"
+            w="fit-content"
             onClick={() => actions.toggleSaved(assistant.id)}
           >
             Remove from My Agents
           </Button>
         ) : (
-          <Button
-            variant="light"
-            onClick={() => actions.toggleSaved(assistant.id)}
-          >
-            Save to My Agents
-          </Button>
+          <Group gap={6} wrap="nowrap">
+            <Button
+              variant="outline"
+              color="ink"
+              size="sm"
+              radius="md"
+              w="fit-content"
+              onClick={() => actions.toggleSaved(assistant.id)}
+            >
+              Save to My Agents
+            </Button>
+            <Tooltip label={SAVE_TOOLTIP} multiline w={240} withArrow>
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                aria-label="About saving agents"
+              >
+                <IconInfoCircle size={18} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
         )}
       </Stack>
     </Card>

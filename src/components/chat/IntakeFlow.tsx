@@ -11,6 +11,7 @@ import type {
 import { actions } from "@/lib/store";
 import { renderQuestion } from "@/lib/structured";
 import { createId } from "@/lib/id";
+import { summariseTitle } from "@/lib/text";
 import { LoadingState } from "@/components/common/LoadingState";
 import { IntakeQuestionCard } from "./IntakeQuestionCard";
 
@@ -57,13 +58,23 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
         createdAt: new Date().toISOString(),
         kind: "intake-summary",
       });
+      // Summarise the chat title from the intake while it's still "Untitled".
+      const firstAnswer = finalAnswers.find((a) => !a.skipped);
+      const titleSeed = firstAnswer
+        ? [...firstAnswer.selectedOptionLabels, firstAnswer.freeText]
+            .filter(Boolean)
+            .join(", ")
+        : agent.name;
       actions.updateChat(chat.id, {
         intakeComplete: true,
         intakeAnswers: finalAnswers,
+        ...(chat.title === "Untitled"
+          ? { title: summariseTitle(titleSeed) }
+          : {}),
       });
       setStatus("complete");
     },
-    [chat.id]
+    [chat.id, chat.title, agent.name]
   );
 
   // Pull the next question: drain the queue, else render the next source question.

@@ -29,7 +29,7 @@ const INTEGRATIONS: { name: string; icon: typeof IconMail; color: string }[] = [
 
 export default function ConnectorsPage() {
   return (
-    <Container size="lg" py="xl">
+    <Container size="xl" py="xl">
       <Stack gap="xs" mb="xl">
         <Title order={2}>Connectors</Title>
         <Text c="dimmed">

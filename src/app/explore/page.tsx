@@ -53,7 +53,7 @@ export default function ExplorePage() {
   const historyRow = assistants.filter((a) => a.historyRecommended);
 
   return (
-    <Container size="lg" py="xl">
+    <Container size="xl" py="xl">
       <Stack gap="xs" mb="lg">
         <Title order={2}>Agent Marketplace</Title>
         <Text c="dimmed">
@@ -75,7 +75,21 @@ export default function ExplorePage() {
       <Chip.Group multiple={false} value={pill} onChange={setPill}>
         <Group gap="xs" mb="xl">
           {PILLS.map((p) => (
-            <Chip key={p} value={p} variant="filled" radius="sm">
+            <Chip
+              key={p}
+              value={p}
+              variant="filled"
+              radius="xl"
+              styles={{
+                iconWrapper: { display: "none" },
+                label: {
+                  fontSize: 14,
+                  height: "auto",
+                  paddingTop: 9,
+                  paddingBottom: 9,
+                },
+              }}
+            >
               {p}
             </Chip>
           ))}
@@ -100,7 +114,7 @@ export default function ExplorePage() {
           }}
         />
       ) : (
-        <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
+        <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
           {filtered.map((a) => (
             <AssistantCard key={a.id} assistant={a} />
           ))}
@@ -117,7 +131,7 @@ function CuratedRow({ title, items }: { title: string; items: Assistant[] }) {
       <Text fw={700} size="lg">
         {title}
       </Text>
-      <SimpleGrid cols={{ base: 1, sm: 2, lg: 4 }} spacing="md">
+      <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
         {items.map((a) => (
           <AssistantCard key={a.id} assistant={a} />
         ))}

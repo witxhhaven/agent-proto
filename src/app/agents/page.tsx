@@ -5,31 +5,18 @@ import { useRouter } from "next/navigation";
 import {
   Badge,
   Button,
-  Card,
   Container,
   Group,
-  Menu,
   Modal,
   SimpleGrid,
-  Stack,
-  Switch,
   Tabs,
   Text,
   Title,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import {
-  IconPlus,
-  IconDots,
-  IconPencil,
-  IconFlask,
-  IconMessage,
-  IconClock,
-  IconTrash,
-} from "@tabler/icons-react";
-import type { Agent } from "@/types";
+import { IconPlus } from "@tabler/icons-react";
 import { actions, useStore } from "@/lib/store";
-import { AgentAvatar } from "@/components/common/AgentAvatar";
+import { AgentManageCard } from "@/components/agents/AgentManageCard";
 import { AssistantCard } from "@/components/explore/AssistantCard";
 import { EmptyState } from "@/components/common/EmptyState";
 
@@ -42,6 +29,7 @@ export default function AgentsPage() {
   const scheduledTasks = useStore((s) => s.scheduledTasks);
   const savedAssistants = assistants.filter((a) => a.saved);
 
+  const [tab, setTab] = useState<string | null>("created");
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [opened, { open, close }] = useDisclosure(false);
 
@@ -58,45 +46,40 @@ export default function AgentsPage() {
     setConfirmId(null);
   }
 
-  function chatWith(agent: Agent) {
-    const chat = actions.createChat({
-      agentId: agent.id,
-      title: `Chat with ${agent.name}`,
-      assistantName: agent.name,
-    });
-    router.push(`/chat/${chat.id}`);
-  }
-
   return (
-    <Container size="lg" py="xl">
-      <Group justify="space-between" align="center" mb="lg" wrap="nowrap">
-        <Title order={2}>My Agents</Title>
-        <Group gap="sm">
-          <Badge
-            variant="light"
-            color={atCap ? "orange" : "gray"}
-            size="lg"
-            radius="sm"
-          >
-            {agents.length}/{AGENT_CAP} agents used
-          </Badge>
-          <Button
-            leftSection={<IconPlus size={16} />}
-            onClick={() => router.push("/agents/new")}
-            disabled={atCap}
-          >
-            New Agent
-          </Button>
-        </Group>
-      </Group>
+    <Container size="xl" py="xl">
+      <Title order={2} mb="lg">
+        My Agents
+      </Title>
 
-      <Tabs defaultValue="created">
+      <Tabs value={tab} onChange={setTab}>
         <Tabs.List mb="lg">
           <Tabs.Tab value="created">Created by You</Tabs.Tab>
           <Tabs.Tab value="saved">
             Saved Agents ({savedAssistants.length})
           </Tabs.Tab>
         </Tabs.List>
+
+        {/* Quota + New Agent live below the tabs and only on Created by You. */}
+        {tab === "created" && (
+          <Group justify="space-between" align="center" mb="lg" wrap="nowrap">
+            <Badge
+              variant="light"
+              color={atCap ? "orange" : "gray"}
+              size="lg"
+              radius="sm"
+            >
+              {agents.length}/{AGENT_CAP} agents used
+            </Badge>
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={() => router.push("/agents/new")}
+              disabled={atCap}
+            >
+              New Agent
+            </Button>
+          </Group>
+        )}
 
         <Tabs.Panel value="created">
           {agents.length === 0 ? (
@@ -109,108 +92,18 @@ export default function AgentsPage() {
               }}
             />
           ) : (
-            <Stack gap="sm">
-              {agents.map((agent) => {
-                const scheduleCount = scheduledTasks.filter(
-                  (t) => t.agentId === agent.id
-                ).length;
-                return (
-                  <Card key={agent.id} withBorder radius="md" padding="md">
-                    <Group justify="space-between" wrap="nowrap">
-                      <Group
-                        wrap="nowrap"
-                        gap="md"
-                        style={{ flex: 1, minWidth: 0 }}
-                      >
-                        <AgentAvatar
-                          iconName={agent.iconName}
-                          bgColor={agent.bgColor}
-                          imageUrl={agent.imageUrl}
-                          size={44}
-                        />
-                        <Stack gap={2} style={{ flex: 1, minWidth: 0 }}>
-                          <Text fw={600} lineClamp={1}>
-                            {agent.name}
-                          </Text>
-                          <Text size="sm" c="dimmed" lineClamp={1}>
-                            {agent.description}
-                          </Text>
-                          <Group gap="xs" mt={2}>
-                            <Badge variant="light" color="gray" size="xs">
-                              {agent.toolIds.length} tools
-                            </Badge>
-                            {scheduleCount > 0 && (
-                              <Badge variant="light" color="gray" size="xs">
-                                Used in {scheduleCount} schedule
-                                {scheduleCount > 1 ? "s" : ""}
-                              </Badge>
-                            )}
-                          </Group>
-                        </Stack>
-                      </Group>
-
-                      <Group gap="sm" wrap="nowrap">
-                        <Switch
-                          checked={agent.enabled}
-                          onChange={() => actions.toggleAgentEnabled(agent.id)}
-                          aria-label="Toggle enabled"
-                        />
-                        <Menu position="bottom-end" withinPortal>
-                          <Menu.Target>
-                            <Button
-                              variant="subtle"
-                              color="gray"
-                              px={6}
-                              aria-label="Agent actions"
-                            >
-                              <IconDots size={18} />
-                            </Button>
-                          </Menu.Target>
-                          <Menu.Dropdown>
-                            <Menu.Item
-                              leftSection={<IconPencil size={16} />}
-                              onClick={() => router.push(`/agents/${agent.id}`)}
-                            >
-                              Edit
-                            </Menu.Item>
-                            <Menu.Item
-                              leftSection={<IconFlask size={16} />}
-                              onClick={() =>
-                                router.push(`/agents/${agent.id}?tab=test`)
-                              }
-                            >
-                              Test
-                            </Menu.Item>
-                            <Menu.Item
-                              leftSection={<IconMessage size={16} />}
-                              onClick={() => chatWith(agent)}
-                            >
-                              Chat
-                            </Menu.Item>
-                            <Menu.Item
-                              leftSection={<IconClock size={16} />}
-                              onClick={() =>
-                                router.push(`/scheduled?agentId=${agent.id}`)
-                              }
-                            >
-                              Schedule this agent
-                            </Menu.Item>
-                            <Menu.Divider />
-                            <Menu.Item
-                              color="red"
-                              leftSection={<IconTrash size={16} />}
-                              onClick={() => askDelete(agent.id)}
-                            >
-                              Delete
-                            </Menu.Item>
-                          </Menu.Dropdown>
-                        </Menu>
-                      </Group>
-                    </Group>
-                  </Card>
-                );
-              })}
-            </Stack>
+            <SimpleGrid cols={{ base: 1, sm: 2, lg: 3 }} spacing="md">
+              {agents.map((agent) => (
+                <AgentManageCard
+                  key={agent.id}
+                  agent={agent}
+                  scheduleCount={
+                    scheduledTasks.filter((t) => t.agentId === agent.id).length
+                  }
+                  onDelete={askDelete}
+                />
+              ))}
+            </SimpleGrid>
           )}
         </Tabs.Panel>
 

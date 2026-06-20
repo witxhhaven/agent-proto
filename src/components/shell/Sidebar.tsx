@@ -69,7 +69,7 @@ export function Sidebar({
   function startChatWith(assistantId: string, name: string) {
     const chat = actions.createChat({
       agentId: assistantId,
-      title: `Chat with ${name}`,
+      title: "Untitled",
       assistantName: name,
     });
     router.push(`/chat/${chat.id}`);
