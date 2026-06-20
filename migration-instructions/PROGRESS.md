@@ -10,24 +10,42 @@ from the first unchecked item.
 
 ## Checklist (build in this order)
 
+> **2026-06-20 structure refinement (from screenshots).** App = **GOVTECH Desk**. Specs rewritten
+> for: home/welcome chat at `/`, new sidebar nav, cosmetic CCE/SN classification, automate-modal
+> creation flow, My Agents tabs + quota, Connectors stub. Several already-`[x]` Foundation items now
+> need **rework** — re-opened below. See the `desk-structure-decisions` memory + bottom Notes.
+
 ### Foundation
-- [x] **conventions.md** — Next.js scaffolded into current folder; Mantine + deps installed; `/`
-  redirects to `/explore`; `createId` + EmptyState/LoadingState/ErrorState compile. _(needs human flow-check)_
-- [x] **data-models.md** — `src/types/index.ts` compiles; all types importable via `@/types`.
-- [x] **mock-data.md** — store hydrates with 2 agents, 2 scheduled tasks (incl. Biology newsletter),
-  ~12 assistants, 15 tools, icon/color presets; mutations persist; `reset()` works; no SSR/hydration errors. _(needs human flow-check)_
-- [x] **app-shell.md** — collapsible sidebar (state persists); active nav highlight; Chats section
-  live; right drawer opens/closes from any page. _(needs human flow-check)_
+- [x] **conventions.md** — scaffolded; `createId` + EmptyState/LoadingState/ErrorState compile.
+  ⚠️ Spec changed: `/` must **no longer redirect to `/explore`** (home chat lives there now). The
+  built `src/app/page.tsx` redirect will be removed when `home.md` is built (step below).
+- [x] **data-models.md** — `src/types/index.ts` compiles. ⚠️ **Rework pending:** add `classification`/
+  `saved`/`sharedWithYou`/`roleRecommended`/`historyRecommended` to `Assistant`, `DataClassification`
+  type, and new `AgentTemplateId` set (qa-chatbot/meeting-minutes/email-reply/document-summariser).
+- [x] **mock-data.md** — store hydrates with seeds. ⚠️ **Rework pending:** seed the new Assistant
+  flags, the 4 screenshot templates, `toggleSaved` action, `createChat` default assistantName
+  "My AI Assistant".
+- [x] **app-shell.md** — collapsible sidebar + right drawer built. ⚠️ **Rework pending:** rebrand to
+  GOVTECH Desk; new nav (New Chat top, New Project disabled, Connectors, Agent Marketplace, My
+  Agents, Scheduled); Favourited Agents + Recent Chats sections; user profile footer; remove the
+  Create-agent sidebar button.
 
 ### Features
-- [ ] **explore.md** — search + filter pills narrow the grid; favorite persists; "Start chat" navigates.
-- [ ] **agents-list.md** — list with avatar/tools/status; Edit/Test/Chat/Schedule/Delete actions work.
-- [ ] **agent-creation.md** — Settings tab (7 fields incl. icon/color picker, knowledge base,
-  two-line tools dropdown, questions); Test tab is ephemeral; save publishes; AI-assist drawer applies.
+- [ ] **home.md** — `/` welcome screen (greeting + shared Composer + classification note + 4 chips);
+  chips prefill composer; first message creates+persists a chat and routes to it; blank chats never
+  listed in the sidebar.
+- [ ] **connectors.md** — static "coming soon" page with disabled integration placeholders.
+- [ ] **explore.md** — Agent Marketplace: curated rows when idle, filtered grid on search/pill;
+  cosmetic CCE/SN badge + favourite + "Save to My Agents"; "Start chat" navigates.
+- [ ] **agents-list.md** — My Agents: Created by You / Saved Agents (N) tabs + "N/5 agents used"
+  quota; "+ New Agent" opens the automate modal; row actions Edit/Test/Chat/Schedule/Delete.
+- [ ] **agent-creation.md** — automate modal ("What would you like to automate?" + 4 templates +
+  Start from scratch) → editor (Untitled Agent header, 7 Settings fields, ephemeral Test tab) →
+  AI-assist drawer; save publishes.
 - [ ] **intake-questions.md** — opening a chat with an intake agent runs the MCQ flow (LLM or mock);
   options + free text + Skip + Back; resumes after reload; summary posts on completion.
-- [ ] **chat.md** — bubbles + intake + schedule-card kinds; scheduling phrase creates a ScheduledTask
-  + inline ScheduleCard; messages persist.
+- [ ] **chat.md** — bubbles + intake + schedule-card kinds; shared Composer w/ cosmetic
+  classification selector; scheduling phrase creates a ScheduledTask + inline ScheduleCard; persists.
 - [ ] **scheduled.md** — ScheduleCard matches reference; manual + AI-assist create; "Test response now"
   ephemeral; mention pills; detail Settings + Log (expandable mock responses).
 
@@ -62,3 +80,11 @@ from the first unchecked item.
   AppFrame keeps navbar visible-but-narrow (64px) on desktop when collapsed. Placeholder pages for /agents,
   /agents/new, /scheduled, /chat/[id] will be replaced in feature steps. Store useStore caveat: selectors must
   return state-owned refs/primitives (no new arrays) to avoid useSyncExternalStore loops.
+- 2026-06-20: **Spec refinement from screenshots (`desk-srn-shots/`).** User confirmed GOVTECH Desk
+  structure; rewrote app-shell/explore/agents-list/agent-creation/chat/conventions/data-models/mock-data/
+  00-START-HERE specs and added features/home.md + features/connectors.md. Decisions captured in the
+  `desk-structure-decisions` project memory (authoritative). Foundation items conventions/data-models/
+  mock-data/app-shell re-opened with ⚠️ rework notes (rebuild order: data-models → mock-data → app-shell →
+  home → connectors → explore → agents-list → agent-creation, then the unchanged intake/chat/scheduled/ai).
+  Net-new fields: Assistant.classification/saved/sharedWithYou/roleRecommended/historyRecommended;
+  store.toggleSaved; AgentTemplateId set changed. **Phase-1 (spec rewrite) only — no app code changed yet.**

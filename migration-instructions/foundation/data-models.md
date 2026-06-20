@@ -10,6 +10,9 @@ removed). Every later file references these.
 export type AssistantCategory =
   | "Writing" | "Research" | "Data & Analytics" | "Productivity" | "Communication";
 
+// Cosmetic GovTech data-classification label (display only — no logic/enforcement).
+export type DataClassification = "CCE/SN" | "C(CE)/SN" | "Official (Open)" | "Restricted";
+
 export interface Assistant {
   id: string;                    // same id as the owning Agent when isOwned
   name: string;
@@ -21,7 +24,12 @@ export interface Assistant {
   bgColor: string;               // hex; avatar background
   uses: number;
   type: "Official" | "Community" | "Developer";
+  classification?: DataClassification; // cosmetic badge on cards; default "CCE/SN"
   favorited?: boolean;
+  saved?: boolean;               // user clicked "Save to My Agents" → Saved Agents tab
+  sharedWithYou?: boolean;       // for the "Shared with you" marketplace pill (mock)
+  roleRecommended?: boolean;     // curated into "Based on your role" row (mock)
+  historyRecommended?: boolean;  // curated into "Based on your chat history" row (mock)
   isOwned?: boolean;             // created by the user
 }
 
@@ -49,7 +57,9 @@ export interface KnowledgeBase { files: KbFile[]; links: KbLink[]; snippets: KbS
 // ====================================================================
 // Agents (My Agents / creation). Published immediately on save.
 // ====================================================================
-export type AgentTemplateId = "email-reply" | "current-affairs" | "research-digest" | "scratch";
+// The four templates shown in the "What would you like to automate?" modal, plus scratch.
+export type AgentTemplateId =
+  | "qa-chatbot" | "meeting-minutes" | "email-reply" | "document-summariser" | "scratch";
 
 /** Starter template — prefills the (fixed) agent form. */
 export interface AgentTemplate {

@@ -34,8 +34,9 @@ npm install @anthropic-ai/sdk zod
 src/
   app/
     layout.tsx                 ← MantineProvider + AppShell
-    page.tsx                   ← redirect to /explore
-    explore/page.tsx
+    page.tsx                   ← HOME / welcome chat (features/home.md) — NOT a redirect
+    explore/page.tsx           ← Agent Marketplace
+    connectors/page.tsx        ← static "coming soon" page
     agents/page.tsx
     agents/new/page.tsx
     agents/[id]/page.tsx       ← agent detail / edit
@@ -91,5 +92,7 @@ Props: `{ icon?, title, description?, action? }`.
 
 ## Acceptance
 
-- `npm run dev` serves a blank Mantine-themed page at `/` that redirects to `/explore`.
+- `npm run dev` serves a Mantine-themed page at `/`. (The home/welcome screen is built later in
+  `features/home.md`; until then `/` may render a placeholder, but it must **not** redirect to
+  `/explore`.)
 - `createId`, the three common components, and an empty `lib/store.ts` stub compile with no TS errors.

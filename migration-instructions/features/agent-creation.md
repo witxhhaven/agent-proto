@@ -10,14 +10,29 @@ key is added).
 > primary action — **Save** (label it "Save & publish" if you like). A saved agent appears in My
 > Agents and Explore right away.
 
-## 1. Create entry — template picker
+## 1. Create entry — "What would you like to automate?" modal
 
-On `/agents/new`, show `AgentTemplatesModal` first:
-- Prompt box "Describe the agent you want to build…" + **"Draft with AI"**.
-- A card per `agentTemplate` + a **"Start from scratch"** card.
-- Picking a template seeds the form (instructions, toolIds, questions, knowledge, icon, bgColor).
-- "Draft with AI" → `generateAgentDraft(description)` (see `ai/structured-output.md`) pre-fills the
-  form; works in mock mode without a key.
+See `desk-srn-shots/my-agents_created-by-me_new-agent.png`. The **"+ New Agent"** button on the
+My Agents page (and navigating to `/agents/new` directly) opens `AgentTemplatesModal`:
+
+- Title **"What would you like to automate?"**
+- A free-text box "Build an agent or perform a task" with a submit **arrow** button →
+  `generateAgentDraft(description)` (see `ai/structured-output.md`), routes to the editor with the
+  draft pre-filled. Works in mock mode without a key.
+- Subheading "Or choose from our templates:" then a grid of template cards (icon + name +
+  one-liner) — seed these four to match the screenshot: **Q&A Chatbot**, **Meeting Minutes
+  Writer**, **Email Reply Drafter**, **Document Summariser**. Picking one seeds the form
+  (instructions, toolIds, questions, knowledge, icon, bgColor) and opens the editor.
+- A **"Start from scratch"** button at the bottom → opens the editor blank as "Untitled Agent".
+
+Implement the editor at `/agents/new` (blank/seeded) and `/agents/[id]` (existing). The modal can be
+a route-level modal on `/agents/new` and/or opened imperatively from the My Agents button; either
+way it precedes the editor.
+
+> **Editor header** (see `..._new-agent_from-scratch.png`): a back arrow + the agent's avatar +
+> editable title defaulting to **"Untitled Agent"**, with a **Save** split-button (caret) on the
+> right and an **AI-assist sparkle** `ActionIcon` that opens the drawer in section 7. A "Custom
+> Agent" intro card sits above the first field when starting from scratch.
 
 ## 2. Settings tab — `src/components/agents/AgentForm.tsx`
 
@@ -87,6 +102,10 @@ form state. Works in mock mode without a key.
 
 ## Acceptance
 
+- "+ New Agent" / `/agents/new` opens the "What would you like to automate?" modal with the four
+  template cards + free-text box + "Start from scratch".
+- The editor header shows the avatar, an editable "Untitled Agent" title, a Save split-button, and
+  the AI-assist sparkle.
 - Settings tab shows all 7 fields; template selection prefills them; "Start from scratch" is blank.
 - Icon/color picker updates a live avatar preview.
 - Tools dropdown is searchable and shows the two-line (name / brand + provider) format; selections

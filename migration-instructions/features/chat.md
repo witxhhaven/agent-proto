@@ -15,7 +15,9 @@ Route: `src/app/chat/[id]/page.tsx`. Depends on store, app shell, and `IntakeFlo
   - `kind: "schedule-card"` → render the **`ScheduleCard`** (`features/scheduled.md`, `compact`)
     for the `scheduledTaskId`. This is how a chat-created schedule appears inline.
 - **Composer** (`Composer`): `Textarea` + Send. Disabled while intake is active (the user answers
-  via the MCQ cards until intake completes).
+  via the MCQ cards until intake completes). The composer also shows a small **attach** icon and a
+  **cosmetic data-classification selector** (default `C(CE)/SN`) — display only, no logic. Reuse
+  this same `Composer` on the home screen (`features/home.md`).
 
 ## Intake integration
 

@@ -53,29 +53,40 @@ local persistence only** — there is no real backend except one thin LLM proxy 
 Build one file at a time. After each, run `npm run dev` and verify that file's **Acceptance**
 section before moving on.
 
+> **Structure note:** the app is **GOVTECH Desk**. See `desk-srn-shots/` for the layout reference
+> and the `desk-structure-decisions` project memory for the confirmed structure (home/welcome chat
+> at `/`, GovTech sidebar nav, cosmetic CCE/SN classification, automate-modal creation flow, My
+> Agents tabs + quota). The `.md` specs below are authoritative for data/behavior.
+
 1. `foundation/conventions.md` — scaffold + project conventions
 2. `foundation/data-models.md` — all TypeScript types
 3. `foundation/mock-data.md` — seed data + the localStorage store
-4. `foundation/app-shell.md` — sidebar + right drawer skeleton
-5. `features/explore.md`
-6. `features/agents-list.md`
-7. `features/agent-creation.md`
-8. `features/intake-questions.md`  ← the AI centerpiece
-9. `features/chat.md`
-10. `features/scheduled.md`
-11. `ai/proxy-setup.md` — the Next.js LLM route (can be built earlier if you want intake to call
-    real LLM during step 8; a mock is provided either way)
-12. `ai/structured-output.md` — the reusable "text → typed JSON" helper
+4. `foundation/app-shell.md` — GOVTECH Desk sidebar (New Chat, Connectors, Agent Marketplace, My
+   Agents, Scheduled, Favourited Agents, Recent Chats) + right drawer skeleton
+5. `features/home.md` — `/` welcome chat (greeting + composer + chips); the landing screen
+6. `features/connectors.md` — static "coming soon" page
+7. `features/explore.md` — Agent Marketplace (curated rows + filtered grid)
+8. `features/agents-list.md` — My Agents (Created by You / Saved Agents tabs + quota)
+9. `features/agent-creation.md` — automate modal → editor → AI-assist
+10. `features/intake-questions.md`  ← the AI centerpiece
+11. `features/chat.md`
+12. `features/scheduled.md`
+13. `ai/proxy-setup.md` — the Next.js LLM route (can be built earlier if you want intake to call
+    real LLM during step 10; a mock is provided either way)
+14. `ai/structured-output.md` — the reusable "text → typed JSON" helper
 
-> Steps 11–12 are listed last for reading order, but `intake-questions.md` (step 8) depends on the
-> `generateStructured` helper from step 12 and the route from step 11. Build the **mock** versions
+> Steps 13–14 are listed last for reading order, but `intake-questions.md` (step 10) depends on the
+> `generateStructured` helper from step 14 and the route from step 13. Build the **mock** versions
 > of those helpers first (they are fully specified in the `ai/` files), then upgrade to real calls.
 
 ## Definition of done (whole prototype)
 
-- All routes navigable from the sidebar with no console errors.
-- Create an agent (icon/color, knowledge base, tools, questions — with AI-assist), see it in My
-  Agents + Explore, test it in the Test tab, then chat with it for real.
+- Entering the prototype lands on the **home/welcome chat** at `/` ("Good Afternoon, Alvin" +
+  composer + chips); sending the first message creates a persisted chat that appears in Recent Chats.
+- All routes navigable from the GOVTECH Desk sidebar with no console errors.
+- Create an agent via the automate modal (template or scratch; icon/color, knowledge base, tools,
+  questions — with AI-assist), see it in My Agents (Created by You) + the Agent Marketplace, test it
+  in the Test tab, then chat with it for real.
 - Starting a chat with an agent that has intake questions runs the MCQ flow with LLM-generated
   options (or mock options without a key).
 - Create a schedule three ways — manual form, AI-assist prompt, and from a chat message — and see the

@@ -51,17 +51,32 @@ export const mockTools: McpTool[] = [
 ## 3. Marketplace seed — `src/data/mockAssistants.ts`
 
 `mockAssistants: Assistant[]`, ~12 entries across all categories with believable name/description/
-owner/tags/`iconName` (from ICON_PRESETS) /`bgColor` (from COLOR_PRESETS) /`uses`/`type`. Set
-`favorited` on 1–2. Examples: "Email Drafter", "Meeting Notes Summarizer", "Policy Researcher",
-"Data Insights", "Standup Digest", "Customer Reply Assistant".
+owner/tags/`iconName` (from ICON_PRESETS) /`bgColor` (from COLOR_PRESETS) /`uses`/`type`. Match the
+screenshot where convenient: "Policy Brief Writer", "Email Reply Drafter", "Press Release Drafter",
+"Slide Deck Generator", "Deep Research Assistant", "Data Insights Analyzer", "Newsletter",
+"Knowledge Q&A".
+- Set `classification: "CCE/SN"` on every entry (cosmetic).
+- Set `favorited` on 1–2 (so the sidebar Favourited Agents section isn't empty — e.g. "Deep
+  Research Assistant").
+- Set `saved: true` on ~3 (so the My Agents "Saved Agents" tab has content — the screenshot shows
+  Policy Brief Writer, Email Reply Drafter, Press Release Drafter).
+- Mark ~4 with `roleRecommended: true` ("Based on your role" row) and ~4 with
+  `historyRecommended: true` ("Based on your chat history" row). Set `sharedWithYou` on 1–2.
 
 ## 4. Agent templates + seed agents — `src/data/mockAgents.ts`
 
-`agentTemplates: AgentTemplate[]` for the 4 ids. Each with `defaultInstructions`, `defaultToolIds`
-(reference real `mockTools` ids), `defaultQuestions`, optional `defaultKnowledge`. `scratch` is
-empty. Example `email-reply`: instructions about drafting replies in a chosen tone, toolIds
-`["g_gmail_send","g_gmail_search"]`, questions like "What tone should replies use?", "Who is the
-sender's typical audience?".
+`agentTemplates: AgentTemplate[]` — the **four shown in the automate modal** plus `scratch`. Names
+must match the screenshot:
+- **`qa-chatbot`** — "Q&A Chatbot": "Answers staff questions from your policies and SOPs."
+- **`meeting-minutes`** — "Meeting Minutes Writer": "Turns meeting notes into clear, shareable
+  minutes."
+- **`email-reply`** — "Email Reply Drafter": "Drafts replies to incoming emails in your tone."
+  toolIds `["g_gmail_send","g_gmail_search"]`, questions like "What tone should replies use?".
+- **`document-summariser`** — "Document Summariser": "Condenses long reports and circulars into key
+  points."
+
+Each with `defaultInstructions`, `defaultToolIds` (reference real `mockTools` ids),
+`defaultQuestions`, optional `defaultKnowledge`. `scratch` is empty.
 
 `seedAgents: Agent[]` — **2 published agents** with full fields (icon, bgColor, instructions,
 `knowledgeBase` with at least one file + one link + one snippet, `toolIds`, `questions`). These
@@ -121,8 +136,12 @@ updateChat(chatId, patch: Partial<Chat>): void
 
 // marketplace + demo
 toggleFavorite(assistantId): void
+toggleSaved(assistantId): void         // "Save to My Agents" / "Remove from My Agents" (Saved tab)
 reset(): void                          // re-seed from src/data/*
 ```
+
+> `createChat` defaults `assistantName` to **"My AI Assistant"** when none is passed (general home
+> chat). The home screen (`features/home.md`) calls `createChat` only on first message send.
 
 `createAgent` also pushes a derived `Assistant` (same id, `isOwned: true`, `type: "Developer"`,
 same `iconName`/`bgColor`, category "Productivity") into `assistants`; `deleteAgent` removes both.
@@ -137,6 +156,8 @@ export const createId = (prefix: string) =>
 
 ## Acceptance
 
-- Store hydrates with 2 agents, 2 scheduled tasks (incl. the Biology newsletter), ~12 assistants,
-  15 tools, icon/color presets. Mutations persist across reload; `reset()` restores seeds.
+- Store hydrates with 2 agents, 2 scheduled tasks (incl. the Biology newsletter), ~12 assistants
+  (each with cosmetic `classification`; some `saved`/`favorited`/`roleRecommended`/
+  `historyRecommended`), 15 tools, icon/color presets, and the 4 + scratch templates.
+- `toggleFavorite` / `toggleSaved` persist across reload. Mutations persist; `reset()` restores seeds.
 - No SSR `localStorage` errors and no hydration warnings.
