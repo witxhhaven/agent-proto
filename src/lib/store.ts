@@ -46,6 +46,33 @@ export function deriveAssistant(agent: Agent): Assistant {
   };
 }
 
+/**
+ * Inverse of deriveAssistant: build a chat-ready Agent from a marketplace
+ * Assistant so its greeting + onboarding questions drive the chat intake flow,
+ * even though it isn't an owned Agent in `state.agents`. Marketplace assistants
+ * have no editable instructions, so we synthesize a light system prompt from the
+ * name + description to keep replies on-character.
+ */
+export function agentFromAssistant(a: Assistant): Agent {
+  return {
+    id: a.id,
+    templateId: "scratch",
+    name: a.name,
+    description: a.description,
+    iconName: a.iconName,
+    bgColor: a.bgColor,
+    imageUrl: a.imageUrl,
+    greeting: a.greeting,
+    instructions: `You are ${a.name}. ${a.description}`,
+    knowledgeBase: { sources: [] },
+    toolIds: [],
+    questions: a.questions ?? [],
+    enabled: true,
+    published: true,
+    createdAt: "",
+  };
+}
+
 function clone<T>(value: T): T {
   return typeof structuredClone === "function"
     ? structuredClone(value)
@@ -96,7 +123,7 @@ function ensureHydrated() {
   hydrated = true;
   try {
     const raw = window.localStorage.getItem(KEY);
-    state = ensureSeedScheduling(
+    state = ensureSeedDefaults(
       raw ? (JSON.parse(raw) as StoreState) : seedState()
     );
     persist();
@@ -105,18 +132,22 @@ function ensureHydrated() {
   }
 }
 
-// Demo seed agents always keep the scheduling question, even if an older
-// persisted state predates it. Scoped to seed-agent ids only, so creator agents
-// that deliberately removed the question are left untouched (WYSIWYG).
-const SEED_AGENT_IDS = new Set(seedAgents.map((a) => a.id));
-function ensureSeedScheduling(s: StoreState): StoreState {
+// Backfill demo-seed defaults (scheduling question + greeting) into seed agents,
+// even if an older persisted state predates them. Scoped to seed-agent ids only,
+// so creator agents are left untouched (WYSIWYG). Existing greetings are kept.
+const SEED_AGENTS_BY_ID = new Map(seedAgents.map((a) => [a.id, a]));
+function ensureSeedDefaults(s: StoreState): StoreState {
   return {
     ...s,
-    agents: s.agents.map((a) =>
-      SEED_AGENT_IDS.has(a.id)
-        ? { ...a, questions: withSchedulingQuestion(a.questions ?? []) }
-        : a
-    ),
+    agents: s.agents.map((a) => {
+      const seed = SEED_AGENTS_BY_ID.get(a.id);
+      if (!seed) return a;
+      return {
+        ...a,
+        questions: withSchedulingQuestion(a.questions ?? []),
+        greeting: a.greeting ?? seed.greeting,
+      };
+    }),
   };
 }
 

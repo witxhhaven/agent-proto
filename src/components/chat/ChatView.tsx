@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   Badge,
@@ -14,7 +14,7 @@ import {
 } from "@mantine/core";
 import { IconPencil } from "@tabler/icons-react";
 import type { Message } from "@/types";
-import { actions, getState, useStore } from "@/lib/store";
+import { actions, agentFromAssistant, getState, useStore } from "@/lib/store";
 import { createId } from "@/lib/id";
 import {
   extractSchedule,
@@ -25,36 +25,55 @@ import { streamComplete } from "@/lib/llm";
 import { summariseTitle } from "@/lib/text";
 import { AgentAvatar } from "@/components/common/AgentAvatar";
 import { Composer } from "./Composer";
+import { Markdown } from "./Markdown";
 import { IntakeFlow } from "./IntakeFlow";
 import { ScheduleCard } from "@/components/scheduled/ScheduleCard";
 
 export function ChatView({ chatId }: { chatId: string }) {
   const router = useRouter();
   const chat = useStore((s) => s.chats.find((c) => c.id === chatId));
-  const agent = useStore((s) =>
+  // Only agents you own are editable; resolved from state.agents.
+  const ownedAgent = useStore((s) =>
     chat?.agentId ? s.agents.find((a) => a.id === chat.agentId) : undefined
+  );
+  // Marketplace assistants aren't in state.agents — fall back to the assistant so
+  // its greeting + onboarding questions still drive the chat.
+  const assistant = useStore((s) =>
+    chat?.agentId ? s.assistants.find((a) => a.id === chat.agentId) : undefined
+  );
+  const agent = useMemo(
+    () => ownedAgent ?? (assistant ? agentFromAssistant(assistant) : undefined),
+    [ownedAgent, assistant]
   );
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [spacerH, setSpacerH] = useState(0);
+  const [pinnedId, setPinnedId] = useState<string | null>(null);
 
-  // Keep the thread pinned to the bottom as messages arrive / stream in.
+  // ChatGPT/Claude-style: when a new user message is sent, scroll it to the top
+  // of the viewport (the bottom spacer guarantees there's room) and let the reply
+  // stream in below — instead of always docking to the bottom.
   useEffect(() => {
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [chat?.messages, busy]);
+    if (!pinnedId) return;
+    const el = scrollRef.current?.querySelector<HTMLElement>(
+      `[data-mid="${pinnedId}"]`
+    );
+    el?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [pinnedId]);
 
-  // Auto-greeting: for an agent chat with no intake questions that's still empty,
-  // seed an opening assistant message so the bottom-aligned thread isn't blank.
+  // Greeting: if the agent has a greeting message, seed it as the first assistant
+  // message when the chat starts (before any intake questions). Blank = no opener.
   useEffect(() => {
     if (!chat || !agent) return;
-    if (agent.questions.length > 0) return; // intake flow handles the opener
+    const greeting = agent.greeting?.trim();
+    if (!greeting) return;
     const fresh = getState().chats.find((c) => c.id === chat.id);
     if (!fresh || fresh.messages.length > 0) return;
     actions.appendMessage(chat.id, {
       id: createId("msg"),
       role: "assistant",
-      content: `Hi! I'm ${agent.name}. ${agent.description} What would you like help with?`,
+      content: greeting,
       createdAt: new Date().toISOString(),
       kind: "text",
     });
@@ -204,6 +223,9 @@ export function ChatView({ chatId }: { chatId: string }) {
     setValue("");
     const userId = appendUser(text);
     handledUserMsg.current = userId; // we'll answer it below; don't double-fire
+    // Pin the new message to the top, reserving a viewport of space below it.
+    setSpacerH(scrollRef.current?.clientHeight ?? 0);
+    setPinnedId(userId);
     // Summarise the title from the first user message while it's still "Untitled".
     if (chat!.title === "Untitled") {
       actions.updateChat(chat!.id, { title: summariseTitle(text) });
@@ -258,12 +280,12 @@ export function ChatView({ chatId }: { chatId: string }) {
               {subtitle}
             </Text>
           </Box>
-          {agent && (
+          {ownedAgent && (
             <Button
               variant="default"
               size="sm"
               leftSection={<IconPencil size={16} />}
-              onClick={() => router.push(`/agents/${agent.id}`)}
+              onClick={() => router.push(`/agents/${ownedAgent.id}`)}
             >
               Edit
             </Button>
@@ -271,24 +293,20 @@ export function ChatView({ chatId }: { chatId: string }) {
         </Group>
       </Box>
 
-      {/* messages — scrollable, docked to the bottom */}
+      {/* messages — scrollable, flowing from the top */}
       <Box ref={scrollRef} style={{ flex: 1, overflowY: "auto" }}>
-        <Container
-          size="md"
-          py="lg"
-          style={{
-            minHeight: "100%",
-            display: "flex",
-            flexDirection: "column",
-          }}
-        >
-          <Stack gap="sm" style={{ marginTop: "auto" }}>
+        <Container size="md" py="lg">
+          <Stack gap="lg">
             {chat.messages.map((m) => (
-              <MessageRow key={m.id} message={m} />
+              <div key={m.id} data-mid={m.id}>
+                <MessageRow message={m} />
+              </div>
             ))}
             {intakeActive && <IntakeFlow agent={agent!} chat={chat} />}
-            {showStandaloneLoader && <TypingIndicator />}
+            {showStandaloneLoader && <AssistantMessage text="" />}
           </Stack>
+          {/* Reserves space so the latest message can scroll to the top. */}
+          <div style={{ height: spacerH }} />
         </Container>
       </Box>
 
@@ -313,8 +331,8 @@ export function ChatView({ chatId }: { chatId: string }) {
 function MessageRow({ message }: { message: Message }) {
   if (message.kind === "schedule-card" && message.scheduledTaskId) {
     return (
-      <Stack gap={6}>
-        {message.content && <BubbleAssistant text={message.content} />}
+      <Stack gap={8}>
+        {message.content && <AssistantMessage text={message.content} />}
         <ScheduleCardWrapper taskId={message.scheduledTaskId} />
       </Stack>
     );
@@ -339,34 +357,12 @@ function MessageRow({ message }: { message: Message }) {
       </Group>
     );
   }
-  return <BubbleAssistant text={message.content} />;
+  return <AssistantMessage text={message.content} />;
 }
 
-function BubbleAssistant({ text }: { text: string }) {
-  return (
-    <Group justify="flex-start">
-      <Paper withBorder p="sm" radius="md" maw={640}>
-        {text ? (
-          <Text size="md" style={{ whiteSpace: "pre-wrap" }}>
-            {text}
-          </Text>
-        ) : (
-          <Dots />
-        )}
-      </Paper>
-    </Group>
-  );
-}
-
-/** Standalone "assistant is thinking" bubble (used before streaming starts). */
-function TypingIndicator() {
-  return (
-    <Group justify="flex-start">
-      <Paper withBorder p="sm" radius="md">
-        <Dots />
-      </Paper>
-    </Group>
-  );
+/** Borderless, full content-width assistant message (no avatar/name header). */
+function AssistantMessage({ text }: { text: string }) {
+  return <Stack gap={6}>{text ? <Markdown>{text}</Markdown> : <Dots />}</Stack>;
 }
 
 function Dots() {

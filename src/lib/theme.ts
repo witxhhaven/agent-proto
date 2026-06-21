@@ -150,6 +150,9 @@ export const theme = createTheme({
     },
     Card: {
       defaultProps: { radius: "lg" as const, withBorder: true },
+      // Slightly darker than Mantine's default gray-3 border so cards read more
+      // crisply against the light page.
+      styles: { root: { borderColor: "var(--mantine-color-gray-4)" } },
     },
     Paper: {
       defaultProps: { radius: "lg" as const },

@@ -109,30 +109,33 @@ export const agentTemplates: AgentTemplate[] = [
 
 export const seedAgents: Agent[] = [
   {
-    id: "agent_inbox_concierge",
+    id: "agent_citizen_enquiry",
     templateId: "email-reply",
-    name: "Inbox Concierge",
-    description: "Triages and drafts replies to your incoming email.",
-    iconName: "IconMail",
-    bgColor: "#4F46E5",
+    name: "Citizen Enquiry Responder",
+    description:
+      "Drafts clear replies to citizen enquiries using your agency's FAQs and policies.",
+    iconName: "IconMessage",
+    bgColor: "#2563EB",
+    greeting:
+      "Hi! I help officers respond to citizen enquiries quickly and accurately, grounded in your agency's FAQs and policies. Let's set a few preferences first.",
     instructions:
-      "Triage incoming email by urgency, then draft a reply in a warm but efficient tone. Surface anything that needs a human decision before sending.",
+      "Draft clear, empathetic replies to citizen enquiries in plain language, grounded in the agency's FAQs and policy documents. Cite the relevant policy or scheme where helpful, keep a professional and respectful tone, and flag anything that needs an officer's judgement before sending.",
     knowledgeBase: {
       sources: [
         {
           id: "kb_f1",
-          name: "Support macros",
+          name: "Agency FAQs",
           type: "file",
           files: [
-            { id: "kb_f1_a", name: "support_macros.pdf", sizeLabel: "84 KB", kind: "pdf" },
+            { id: "kb_f1_a", name: "citizen_faqs.pdf", sizeLabel: "120 KB", kind: "pdf" },
           ],
         },
         {
           id: "kb_l1",
-          name: "Email style guide",
+          name: "Policy handbook",
           type: "sharepoint",
           files: [],
-          url: "https://contoso.sharepoint.com/sites/style-guide",
+          url: "https://agency.sharepoint.com/sites/policy-handbook",
         },
       ],
     },
@@ -144,8 +147,9 @@ export const seedAgents: Agent[] = [
         helpText: "This sets the overall voice of every drafted reply.",
       },
       {
-        id: "q_priority",
-        prompt: "Which senders should always be treated as high priority?",
+        id: "q_topics",
+        prompt: "Which enquiry topics should this agent handle?",
+        helpText: "e.g. grants, licensing, appeals, general feedback.",
         allowMultiple: true,
       },
     ],
@@ -159,6 +163,8 @@ export const seedAgents: Agent[] = [
     description: "Weekly research digest on your watchlist of markets.",
     iconName: "IconChartBar",
     bgColor: "#059669",
+    greeting:
+      "Hi! I'm Market Pulse. I put together a weekly research digest on the markets you care about. A few quick questions to tailor it.",
     instructions:
       "Each run, pull the latest on the watchlist topics and produce a themed digest with citations and a short 'what changed' summary at the top.",
     knowledgeBase: {

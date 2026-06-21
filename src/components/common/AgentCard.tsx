@@ -82,7 +82,9 @@ export function AgentCard(props: AgentCardProps) {
     if (props.variant === "marketplace") {
       const a = props.assistant;
       const chat = actions.createChat({
-        agentId: a.isOwned ? a.id : null,
+        // Always reference the assistant id: owned ones resolve to a real Agent,
+        // marketplace ones drive intake via agentFromAssistant() in ChatView.
+        agentId: a.id,
         title: "Untitled",
         assistantName: a.name,
       });

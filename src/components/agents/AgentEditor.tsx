@@ -14,6 +14,7 @@ import {
   Tabs,
   Text,
   TextInput,
+  Textarea,
   ThemeIcon,
   Tooltip,
 } from "@mantine/core";
@@ -50,6 +51,7 @@ export interface AgentDraftState {
   iconName: string;
   bgColor: string;
   imageUrl?: string;
+  greeting: string;
   instructions: string;
   knowledgeBase: KnowledgeBase;
   toolIds: string[];
@@ -66,6 +68,7 @@ export function emptyDraft(): AgentDraftState {
     iconName: "IconRobot",
     bgColor: "#4F46E5",
     imageUrl: undefined,
+    greeting: "",
     instructions: "",
     knowledgeBase: { sources: [] },
     toolIds: [],
@@ -84,6 +87,7 @@ export function draftFromAgent(agent: Agent): AgentDraftState {
     iconName: agent.iconName,
     bgColor: agent.bgColor,
     imageUrl: agent.imageUrl,
+    greeting: agent.greeting ?? "",
     instructions: agent.instructions,
     knowledgeBase: agent.knowledgeBase,
     toolIds: agent.toolIds,
@@ -161,6 +165,7 @@ export function AgentEditor({
       iconName: draft.iconName,
       bgColor: draft.bgColor,
       imageUrl: draft.imageUrl,
+      greeting: draft.greeting.trim() || undefined,
       instructions: draft.instructions,
       knowledgeBase: draft.knowledgeBase,
       toolIds: draft.toolIds,
@@ -415,6 +420,19 @@ export function AgentEditor({
               />
 
               <Field
+                label="Greeting message"
+                description="Shown as the agent's first message when a chat starts, before any onboarding questions. Leave blank for none."
+              >
+                <Textarea
+                  placeholder="e.g. Hi! I'm here to help triage your inbox. Let's set things up."
+                  value={draft.greeting}
+                  onChange={(e) => patch({ greeting: e.currentTarget.value })}
+                  autosize
+                  minRows={2}
+                />
+              </Field>
+
+              <Field
                 label="Onboarding questions"
                 description="A quick multiple-choice flow shown when a chat starts, collecting the details this agent needs to perform well."
               >
@@ -431,6 +449,7 @@ export function AgentEditor({
               name={draft.name}
               description={draft.description}
               instructions={draft.instructions}
+              greeting={draft.greeting}
               questions={draft.questions}
             />
           </Tabs.Panel>

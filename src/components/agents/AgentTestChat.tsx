@@ -3,18 +3,35 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Box, Button, Group, Paper, Stack, Text } from "@mantine/core";
 import { IconRefresh } from "@tabler/icons-react";
-import type { IntakeAnswer, IntakeQuestion, RenderedQuestion } from "@/types";
-import { renderQuestion } from "@/lib/structured";
+import type {
+  IntakeAnswer,
+  IntakeQuestion,
+  RenderedQuestion,
+  ScheduledTask,
+} from "@/types";
+import {
+  renderQuestion,
+  looksLikeSchedule,
+  extractSchedule,
+  summariseChatForSchedule,
+  synthesizeScheduleInstruction,
+} from "@/lib/structured";
 import { streamComplete } from "@/lib/llm";
 import { createId } from "@/lib/id";
+import { SCHEDULING_QUESTION_ID } from "@/data/onboarding";
 import { LoadingState } from "@/components/common/LoadingState";
 import { Composer } from "@/components/chat/Composer";
+import { Markdown } from "@/components/chat/Markdown";
 import { IntakeQuestionCard } from "@/components/chat/IntakeQuestionCard";
+import { renderSchedulingQuestion } from "@/components/chat/IntakeFlow";
+import { ScheduleCard } from "@/components/scheduled/ScheduleCard";
 
 interface LocalMsg {
   id: string;
   role: "user" | "assistant";
   text: string;
+  /** When set, the message renders an (ephemeral) schedule preview card. */
+  task?: ScheduledTask;
 }
 
 type Status =
@@ -29,6 +46,7 @@ export interface AgentTestChatProps {
   name: string;
   description: string;
   instructions: string;
+  greeting?: string;
   questions: IntakeQuestion[];
 }
 
@@ -41,6 +59,7 @@ export function AgentTestChat({
   name,
   description,
   instructions,
+  greeting,
   questions,
 }: AgentTestChatProps) {
   const intake = useMemo(
@@ -48,28 +67,49 @@ export function AgentTestChat({
     [questions]
   );
 
+  // Starter message: seed the agent's greeting as the first assistant message,
+  // mirroring the real chat which shows it before any intake questions.
+  const initialMessages = useCallback((): LocalMsg[] => {
+    const g = greeting?.trim();
+    return g ? [{ id: createId("tmsg"), role: "assistant", text: g }] : [];
+  }, [greeting]);
+
   const [sourceIndex, setSourceIndex] = useState(0);
   const [queue, setQueue] = useState<RenderedQuestion[]>([]);
   const [current, setCurrent] = useState<RenderedQuestion | null>(null);
   const [answers, setAnswers] = useState<IntakeAnswer[]>([]);
   const [history, setHistory] = useState<RenderedQuestion[]>([]);
-  const [messages, setMessages] = useState<LocalMsg[]>([]);
+  const [messages, setMessages] = useState<LocalMsg[]>(initialMessages);
   const [status, setStatus] = useState<Status>(
     intake.length > 0 ? "idle" : "complete"
   );
   const [busy, setBusy] = useState(false);
   const [value, setValue] = useState("");
 
+  // Mirror the real chat: pin each new user message to the top of the viewport
+  // (a bottom spacer reserves room) instead of always docking to the bottom.
   const scrollRef = useRef<HTMLDivElement>(null);
+  const [spacerH, setSpacerH] = useState(0);
+  const [pinnedId, setPinnedId] = useState<string | null>(null);
   useEffect(() => {
-    const el = scrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [messages, current, busy, status]);
+    if (!pinnedId) return;
+    const el = scrollRef.current?.querySelector<HTMLElement>(
+      `[data-mid="${pinnedId}"]`
+    );
+    el?.scrollIntoView({ block: "start", behavior: "smooth" });
+  }, [pinnedId]);
 
   const addMsg = useCallback((role: LocalMsg["role"], text: string) => {
     const id = createId("tmsg");
     setMessages((m) => [...m, { id, role, text }]);
     return id;
+  }, []);
+
+  const addTaskMsg = useCallback((text: string, task: ScheduledTask) => {
+    setMessages((m) => [
+      ...m,
+      { id: createId("tmsg"), role: "assistant", text, task },
+    ]);
   }, []);
 
   const updateMsg = useCallback((id: string, text: string) => {
@@ -87,9 +127,11 @@ export function AgentTestChat({
     setCurrent(null);
     setAnswers([]);
     setHistory([]);
-    setMessages([]);
+    setMessages(initialMessages());
     setBusy(false);
     setValue("");
+    setSpacerH(0);
+    setPinnedId(null);
     setStatus(intake.length > 0 ? "idle" : "complete");
   }
 
@@ -109,6 +151,60 @@ export function AgentTestChat({
           ? `Got it, thanks for those details. Here's what I've noted:\n${recap}`
           : "Got it, thanks for those details."
       );
+
+      // If the scheduling question was answered with a recurrence, surface a
+      // schedule preview card — mirrors the real chat, but the task is ephemeral.
+      const schedAnswer =
+        answered.find((a) => a.questionId === SCHEDULING_QUESTION_ID) ??
+        answered.find((a) => /schedul/i.test(a.prompt));
+      const schedText = schedAnswer
+        ? [...schedAnswer.selectedOptionLabels, schedAnswer.freeText]
+            .filter(Boolean)
+            .join(" ")
+        : "";
+      if (schedText && looksLikeSchedule(schedText)) {
+        try {
+          const extracted = await extractSchedule(schedText, []);
+          if (extracted.isSchedule) {
+            const taskAnswers = answered
+              .filter(
+                (a) =>
+                  a.questionId !== SCHEDULING_QUESTION_ID &&
+                  !/schedul/i.test(a.prompt)
+              )
+              .map((a) => ({
+                prompt: a.prompt,
+                answer: [...a.selectedOptionLabels, a.freeText]
+                  .filter(Boolean)
+                  .join(", "),
+              }));
+            const bodyText = await synthesizeScheduleInstruction(
+              { name, description, instructions },
+              taskAnswers
+            );
+            const task: ScheduledTask = {
+              id: createId("tmsg-task"),
+              title: extracted.title || `${name || "Agent"} — scheduled run`,
+              instructions: [
+                { type: "text", value: bodyText || description || "" },
+              ],
+              agentId: null,
+              knowledgeFileRef: null,
+              timing: extracted.timing,
+              enabled: true,
+              createdAt: new Date().toISOString(),
+              lastRun: null,
+              runHistory: [],
+              origin: "chat",
+            };
+            addTaskMsg("I've also set this up to run on a schedule:", task);
+            await new Promise((r) => setTimeout(r, 400));
+          }
+        } catch {
+          // scheduling is best-effort — never block the intake result
+        }
+      }
+
       await new Promise((r) => setTimeout(r, 600));
       addMsg("assistant", "Working on it — putting this together for you now…");
       await new Promise((r) => setTimeout(r, 300));
@@ -141,7 +237,7 @@ export function AgentTestChat({
       }
       setStatus("complete");
     },
-    [addMsg, updateMsg, instructions]
+    [addMsg, addTaskMsg, updateMsg, name, description, instructions]
   );
 
   // Pull the next question: drain the queue, else render the next source question.
@@ -155,6 +251,15 @@ export function AgentTestChat({
     }
     if (sourceIndex >= intake.length) {
       void finish(answers);
+      return;
+    }
+    // The scheduling question renders with concrete, parseable options (same as
+    // the real chat), so it always appears and a single pick creates a schedule.
+    if (intake[sourceIndex].id === SCHEDULING_QUESTION_ID) {
+      setSourceIndex((i) => i + 1);
+      setQueue([]);
+      setCurrent(renderSchedulingQuestion());
+      setStatus("answering");
       return;
     }
     setStatus("generating");
@@ -181,8 +286,9 @@ export function AgentTestChat({
   }, [status, current, advance]);
 
   function handleAnswer(answer: IntakeAnswer) {
+    // Like the real chat, answering does NOT add a user bubble — the cards flow
+    // one at a time and the recap appears when intake finishes.
     if (current) setHistory((h) => [...h, current]);
-    addMsg("user", answerText(answer));
     setAnswers((a) => [...a, answer]);
     setCurrent(null);
     setStatus("idle");
@@ -203,22 +309,51 @@ export function AgentTestChat({
     if (!prev) return;
     setHistory((h) => h.slice(0, -1));
     setAnswers((a) => a.slice(0, -1));
-    setMessages((m) => m.slice(0, -1)); // drop the last user answer bubble
     setQueue((q) => (current ? [current, ...q] : q));
     setCurrent(prev);
     setStatus("answering");
   }
 
-  // Free conversation once intake is complete — streamed like the real chat.
+  // Free conversation once intake is complete — mirrors the real chat exactly,
+  // including the schedule preview (but everything stays ephemeral).
   async function sendFree(text: string) {
     setValue("");
-    addMsg("user", text);
+    const userId = addMsg("user", text);
+    setSpacerH(scrollRef.current?.clientHeight ?? 0);
+    setPinnedId(userId);
     setBusy(true);
-    const history = [...messages, { id: "", role: "user" as const, text }]
-      .filter((m) => m.role === "user" || m.role === "assistant")
-      .map((m) => ({ role: m.role, content: m.text }));
-    const replyId = addMsg("assistant", "");
+    const history = [
+      ...messages.map((m) => ({ role: m.role, content: m.text })),
+      { role: "user" as const, content: text },
+    ];
     try {
+      // Schedule preview — same detection as the real chat, but the card is an
+      // in-memory task that is never persisted and never actually runs.
+      if (looksLikeSchedule(text)) {
+        const extracted = await extractSchedule(text, []);
+        if (extracted.isSchedule) {
+          const detailed = await summariseChatForSchedule(
+            history,
+            name || "the assistant"
+          );
+          const task: ScheduledTask = {
+            id: createId("tmsg-task"),
+            title: extracted.title,
+            instructions: [{ type: "text", value: detailed }],
+            agentId: null,
+            knowledgeFileRef: null,
+            timing: extracted.timing,
+            enabled: true,
+            createdAt: new Date().toISOString(),
+            lastRun: null,
+            runHistory: [],
+            origin: "chat",
+          };
+          addTaskMsg("I've scheduled that for you:", task);
+          return;
+        }
+      }
+      const replyId = addMsg("assistant", "");
       let acc = "";
       await streamComplete(history, {
         system: instructions || undefined,
@@ -230,8 +365,8 @@ export function AgentTestChat({
       });
       if (!acc) updateMsg(replyId, "(no response)");
     } catch (err) {
-      updateMsg(
-        replyId,
+      addMsg(
+        "assistant",
         `Sorry — the reply failed: ${
           err instanceof Error ? err.message : "unknown error"
         }`
@@ -244,8 +379,15 @@ export function AgentTestChat({
   const intakeActive = status !== "complete";
 
   return (
-    <Stack gap="sm" h="100%">
-      <Group justify="space-between">
+    <Box
+      style={{
+        display: "flex",
+        flexDirection: "column",
+        height: "calc(100dvh - 220px)",
+        minHeight: 440,
+      }}
+    >
+      <Group justify="space-between" pb="xs">
         <Text size="sm" c="dimmed">
           Ephemeral test — nothing here is saved.
         </Text>
@@ -259,33 +401,38 @@ export function AgentTestChat({
         </Button>
       </Group>
 
-      <Box ref={scrollRef} style={{ overflowY: "auto", maxHeight: "60vh" }}>
-        <Stack gap="sm">
+      <Box ref={scrollRef} style={{ flex: 1, overflowY: "auto" }}>
+        <Stack gap="md">
           {messages.map((m) =>
             m.role === "user" ? (
-              <Group key={m.id} justify="flex-end">
+              <Group key={m.id} data-mid={m.id} justify="flex-end">
                 <Paper withBorder p="sm" radius="md" bg="brand-blue.0" maw="80%">
                   <Text size="md" style={{ whiteSpace: "pre-wrap" }}>
                     {m.text}
                   </Text>
                 </Paper>
               </Group>
+            ) : m.task ? (
+              <Stack key={m.id} data-mid={m.id} gap={8}>
+                {m.text && <Markdown>{m.text}</Markdown>}
+                <ScheduleCard task={m.task} />
+                <Text size="xs" c="dimmed">
+                  Preview only — this is a test, so the schedule won&apos;t
+                  actually run or be saved.
+                </Text>
+              </Stack>
             ) : (
-              <Group key={m.id} justify="flex-start">
-                <Paper withBorder p="sm" radius="md" maw="80%">
-                  {m.text ? (
-                    <Text size="md" style={{ whiteSpace: "pre-wrap" }}>
-                      {m.text}
-                    </Text>
-                  ) : (
-                    <Group gap={4}>
-                      <span className="typing-dot" />
-                      <span className="typing-dot" />
-                      <span className="typing-dot" />
-                    </Group>
-                  )}
-                </Paper>
-              </Group>
+              <Box key={m.id} data-mid={m.id}>
+                {m.text ? (
+                  <Markdown>{m.text}</Markdown>
+                ) : (
+                  <Group gap={4}>
+                    <span className="typing-dot" />
+                    <span className="typing-dot" />
+                    <span className="typing-dot" />
+                  </Group>
+                )}
+              </Box>
             )
           )}
 
@@ -316,9 +463,11 @@ export function AgentTestChat({
             />
           )}
         </Stack>
+        {/* Reserves space so the latest message can scroll to the top. */}
+        <div style={{ height: spacerH }} />
       </Box>
 
-      <Box style={{ marginTop: "auto" }}>
+      <Box pt="xs">
         <Composer
           value={value}
           onChange={setValue}
@@ -332,6 +481,6 @@ export function AgentTestChat({
           }
         />
       </Box>
-    </Stack>
+    </Box>
   );
 }

@@ -19,6 +19,7 @@ function draftFromTemplate(t: AgentTemplate): AgentDraftState {
     description: t.shortDescription,
     iconName: t.iconName,
     bgColor: t.bgColor,
+    greeting: "",
     instructions: t.defaultInstructions,
     knowledgeBase: { sources: t.defaultKnowledge?.sources ?? [] },
     toolIds: t.defaultToolIds,

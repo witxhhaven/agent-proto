@@ -33,8 +33,9 @@ type Status =
   | "complete";
 
 // Concrete, single-click scheduling options. Each label parses via
-// extractSchedule, so picking one is enough to create a schedule.
-function renderSchedulingQuestion(): RenderedQuestion {
+// extractSchedule, so picking one is enough to create a schedule. Exported so
+// the ephemeral Test tab renders the exact same question.
+export function renderSchedulingQuestion(): RenderedQuestion {
   return {
     id: SCHEDULING_QUESTION_ID,
     prompt: "Would you like to run this on a schedule?",
