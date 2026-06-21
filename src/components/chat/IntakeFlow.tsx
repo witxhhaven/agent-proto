@@ -15,6 +15,7 @@ import {
   renderQuestion,
   extractSchedule,
   looksLikeSchedule,
+  mockExtractSchedule,
   synthesizeScheduleInstruction,
 } from "@/lib/structured";
 import { streamComplete } from "@/lib/llm";
@@ -133,10 +134,14 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
         : "";
       if (schedText && looksLikeSchedule(schedText)) {
         try {
-          const extracted = await extractSchedule(
+          let extracted = await extractSchedule(
             schedText,
             getState().agents.map((a) => ({ id: a.id, name: a.name }))
           );
+          // The scheduling answer already passed looksLikeSchedule; if the model
+          // declines, fall back to the deterministic parse so the schedule is
+          // still created rather than silently skipped.
+          if (!extracted.isSchedule) extracted = mockExtractSchedule(schedText);
           if (extracted.isSchedule) {
             // Compose the task instruction from the MCQ answers (AI-synthesized,
             // mock fallback), excluding the scheduling answer itself.

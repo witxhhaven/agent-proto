@@ -12,15 +12,19 @@ import {
   Tabs,
   Text,
   Title,
+  Tooltip,
 } from "@mantine/core";
 import { useDisclosure } from "@mantine/hooks";
-import { IconPlus, IconUserCircle, IconBookmark } from "@tabler/icons-react";
-import { actions, useStore } from "@/lib/store";
+import {
+  IconPlus,
+  IconUserCircle,
+  IconBookmark,
+  IconInfoCircle,
+} from "@tabler/icons-react";
+import { actions, AGENT_CAP, useStore } from "@/lib/store";
 import tabClasses from "./segmented-tabs.module.css";
 import { AgentCard } from "@/components/common/AgentCard";
 import { EmptyState } from "@/components/common/EmptyState";
-
-const AGENT_CAP = 5;
 
 export default function AgentsPage() {
   const router = useRouter();
@@ -32,7 +36,11 @@ export default function AgentsPage() {
   const [confirmId, setConfirmId] = useState<string | null>(null);
   const [opened, { open, close }] = useDisclosure(false);
 
-  const atCap = agents.length >= AGENT_CAP;
+  // Shared quota across both tabs: agents you've ADDED (saved from the
+  // marketplace) + agents you've switched ON (active created agents).
+  const usedCount =
+    agents.filter((a) => a.enabled).length + savedAssistants.length;
+  const atCap = usedCount >= AGENT_CAP;
   const target = agents.find((a) => a.id === confirmId) ?? null;
 
   function askDelete(id: string) {
@@ -47,9 +55,27 @@ export default function AgentsPage() {
 
   return (
     <Container size="xl" py="xl">
-      <Title order={2} mb="lg">
-        My Agents
-      </Title>
+      {/* Shared quota tag sits beside the title; counts added (saved) + active. */}
+      <Group gap="sm" align="center" mb="lg" wrap="nowrap">
+        <Title order={2}>My Agents</Title>
+        <Tooltip
+          label={`This is shared across My Agents: the agents you've added (saved) plus the ones you've switched on. You can have up to ${AGENT_CAP} at a time — switch one off or remove a saved agent to free a slot.`}
+          multiline
+          w={260}
+          withArrow
+        >
+          <Badge
+            variant="light"
+            color={atCap ? "orange" : "gray"}
+            size="xl"
+            radius="sm"
+            style={{ cursor: "default" }}
+            rightSection={<IconInfoCircle size={14} />}
+          >
+            {usedCount} of {AGENT_CAP} active
+          </Badge>
+        </Tooltip>
+      </Group>
 
       <Tabs value={tab} onChange={setTab} variant="pills">
         <Group justify="space-between" align="center" mb="xl" wrap="nowrap">
@@ -70,31 +96,22 @@ export default function AgentsPage() {
             </Tabs.Tab>
           </Tabs.List>
 
-          {/* Quota + New Agent sit to the right of the tabs, only on Created by You. */}
+          {/* New Agent only on Created by You. */}
           {tab === "created" && (
-            <Group align="center" wrap="nowrap">
-              <Badge
-                variant="light"
-                color={atCap ? "orange" : "gray"}
-                size="lg"
-                radius="sm"
-              >
-                {agents.length}/{AGENT_CAP} agents used
-              </Badge>
-              <Button
-                leftSection={<IconPlus size={16} />}
-                onClick={() => router.push("/agents/new")}
-                disabled={atCap}
-              >
-                New Agent
-              </Button>
-            </Group>
+            <Button
+              leftSection={<IconPlus size={16} />}
+              onClick={() => router.push("/agents/new")}
+              disabled={atCap}
+            >
+              New Agent
+            </Button>
           )}
         </Group>
 
         <Tabs.Panel value="created">
           <Text c="dimmed" mb="md">
-            Agents you create are automatically used by Desk in chats and tasks.
+            Switched-on agents are used by Desk in chats and tasks. Toggle an
+            agent off to pause it and free up a slot.
           </Text>
           {agents.length === 0 ? (
             <EmptyState

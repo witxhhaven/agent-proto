@@ -2,9 +2,17 @@
 
 import { Suspense, useState } from "react";
 import { useSearchParams } from "next/navigation";
-import { Button, Container, Group, Stack, Title } from "@mantine/core";
-import { IconPlus } from "@tabler/icons-react";
-import { useStore } from "@/lib/store";
+import {
+  Badge,
+  Button,
+  Container,
+  Group,
+  Stack,
+  Title,
+  Tooltip,
+} from "@mantine/core";
+import { IconPlus, IconInfoCircle } from "@tabler/icons-react";
+import { SCHEDULE_CAP, useStore } from "@/lib/store";
 import { ScheduleCard } from "@/components/scheduled/ScheduleCard";
 import { ScheduleCreate } from "@/components/scheduled/ScheduleCreate";
 import { EmptyState } from "@/components/common/EmptyState";
@@ -19,16 +27,42 @@ function ScheduledInner() {
     linkedAgentId
   );
 
+  // The quota counts schedules that are switched on (active); toggling one off
+  // frees a slot.
+  const activeCount = tasks.filter((t) => t.enabled).length;
+  const atCap = activeCount >= SCHEDULE_CAP;
+
   return (
     <Container size="xl" py="xl">
-      <Group justify="space-between" mb="lg">
-        <Title order={2}>Scheduled</Title>
+      <Group justify="space-between" mb="lg" wrap="nowrap">
+        {/* Quota tag sits beside the title; counts switched-on schedules. */}
+        <Group gap="sm" align="center" wrap="nowrap">
+          <Title order={2}>Scheduled</Title>
+          <Tooltip
+            label={`You can have up to ${SCHEDULE_CAP} schedules active at a time. Toggle one off to free up a slot.`}
+            multiline
+            w={240}
+            withArrow
+          >
+            <Badge
+              variant="light"
+              color={atCap ? "orange" : "gray"}
+              size="xl"
+              radius="sm"
+              style={{ cursor: "default" }}
+              rightSection={<IconInfoCircle size={14} />}
+            >
+              {activeCount} of {SCHEDULE_CAP} active
+            </Badge>
+          </Tooltip>
+        </Group>
         <Button
           leftSection={<IconPlus size={16} />}
           onClick={() => {
             setDefaultAgentId(null);
             setCreateOpen(true);
           }}
+          disabled={atCap}
         >
           New schedule
         </Button>

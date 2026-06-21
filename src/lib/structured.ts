@@ -597,3 +597,34 @@ function localScheduleSummary(turns: ChatTurn[], agentName: string): string {
   );
   return lines.join("\n");
 }
+
+// ---------------------------------------------------------------------------
+// 5. improveInstruction — AI-assist "improve my existing instruction" button
+// ---------------------------------------------------------------------------
+export async function improveInstruction(text: string): Promise<string> {
+  const system =
+    "You refine instructions for a recurring scheduled task. Rewrite the given instruction to be clearer, more specific, and well-structured while preserving the user's intent. IMPORTANT: keep every @AgentName mention exactly as written (same spelling, including the @) — do not drop, rename, or reword them. Return only the improved instruction text, with no preamble.";
+  try {
+    const res = await complete(
+      [
+        {
+          role: "user",
+          content: `Improve this scheduled task instruction:\n\n${text}`,
+        },
+      ],
+      system
+    );
+    if (res.text && res.text.trim() && !res.mock) return res.text.trim();
+  } catch {
+    // fall through to the deterministic improvement
+  }
+  return localImproveInstruction(text);
+}
+
+function localImproveInstruction(text: string): string {
+  const t = text.trim();
+  if (!t) return t;
+  const capped = t.charAt(0).toUpperCase() + t.slice(1);
+  const withStop = /[.!?]$/.test(capped) ? capped : `${capped}.`;
+  return `${withStop} Include any relevant context and constraints, and present the result clearly and concisely.`;
+}

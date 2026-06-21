@@ -36,8 +36,13 @@ export function ScheduleCard({
 }) {
   const [modalOpen, setModalOpen] = useState(false);
   const [modalTab, setModalTab] = useState<"settings" | "log">("settings");
+  // A schedule may wrap an owned agent OR a marketplace assistant (the latter
+  // isn't in state.agents), so resolve from both.
   const agent = useStore((s) =>
-    task.agentId ? s.agents.find((a) => a.id === task.agentId) : undefined
+    task.agentId
+      ? s.agents.find((a) => a.id === task.agentId) ??
+        s.assistants.find((a) => a.id === task.agentId)
+      : undefined
   );
 
   const description =

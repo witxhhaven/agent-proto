@@ -194,21 +194,10 @@ export function AgentCard(props: AgentCardProps) {
 
         {props.variant === "marketplace" ? (
           isOwnedAgent ? (
-            <Tooltip
-              label="You created this agent. Turn it on or off and manage its settings from My Agents."
-              multiline
-              w={260}
-              withArrow
-            >
-              <ActionIcon
-                variant="subtle"
-                color="gray"
-                size="sm"
-                aria-label="This agent is managed in My Agents"
-              >
-                <IconInfoCircle size={16} />
-              </ActionIcon>
-            </Tooltip>
+            <Text size="xs" c="dimmed">
+              Note: You created this agent. Turn it on or off and manage its
+              settings from My Agents.
+            </Text>
           ) : props.assistant.saved ? (
             <Button
               variant="outline"

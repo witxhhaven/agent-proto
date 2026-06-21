@@ -29,7 +29,7 @@ import {
   IconMessageQuestion,
 } from "@tabler/icons-react";
 import type { Agent, AgentTemplateId, IntakeQuestion, KnowledgeBase } from "@/types";
-import { actions } from "@/lib/store";
+import { actions, AGENT_CAP, useStore } from "@/lib/store";
 import { useRightDrawer } from "@/components/shell/RightDrawerProvider";
 import { AgentAvatar } from "@/components/common/AgentAvatar";
 import { IconColorPicker } from "./IconColorPicker";
@@ -114,7 +114,14 @@ export function AgentEditor({
   const [draft, setDraft] = useState<AgentDraftState>(initial);
   const [savedId, setSavedId] = useState<string | null>(agentId ?? null);
   const [publishOpen, setPublishOpen] = useState(false);
+  const [autoOffOpen, setAutoOffOpen] = useState(false);
   const seededRef = useRef(false);
+  // Shared My Agents quota: agents you've added (saved) + agents switched on.
+  const usedCount = useStore(
+    (s) =>
+      s.agents.filter((a) => a.enabled).length +
+      s.assistants.filter((a) => a.saved).length
+  );
 
   function patch(p: Partial<AgentDraftState>) {
     setDraft((d) => ({ ...d, ...p }));
@@ -191,6 +198,13 @@ export function AgentEditor({
     if (savedId) {
       actions.updateAgent(savedId, payload);
       return savedId;
+    }
+    // Shared My Agents cap: if all slots are full, create the agent switched OFF
+    // and tell the user via a modal — rather than silently overflowing the quota.
+    if (payload.enabled && usedCount >= AGENT_CAP) {
+      payload.enabled = false;
+      patch({ enabled: false });
+      setAutoOffOpen(true);
     }
     const created = actions.createAgent(payload);
     setSavedId(created.id);
@@ -480,6 +494,28 @@ export function AgentEditor({
             >
               Publish
             </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={autoOffOpen}
+        onClose={() => setAutoOffOpen(false)}
+        title="Maximum active agents reached"
+        centered
+        size="md"
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            Your My Agents quota is full ({AGENT_CAP} of {AGENT_CAP}) — this
+            counts the agents you&apos;ve added (saved) plus the ones you&apos;ve
+            switched on. We&apos;ve saved{" "}
+            <strong>{draft.name.trim() || "this agent"}</strong> and switched it{" "}
+            <strong>off</strong> for now. Switch another agent off, or remove a
+            saved agent, to free a slot — then switch this one on.
+          </Text>
+          <Group justify="flex-end">
+            <Button onClick={() => setAutoOffOpen(false)}>Got it</Button>
           </Group>
         </Stack>
       </Modal>

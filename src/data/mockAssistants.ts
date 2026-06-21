@@ -1,4 +1,5 @@
 import type { Assistant } from "@/types";
+import { SCHEDULING_QUESTION } from "@/data/onboarding";
 
 // Names aligned with the GOVTECH Desk screenshots (desk-srn-shots/agent marketplace.png,
 // my-agents_saved-agents.png). Every entry carries a cosmetic CCE/SN classification.
@@ -51,18 +52,36 @@ export const mockAssistants: Assistant[] = [
     imageUrl: "/avatars/template-email-reply.png",
     greeting:
       "Hi! I scan your unread emails and draft replies grounded in your knowledge sources. Let's set a couple of preferences first.\n\nNote: I only read emails from the past 24 hours, and I skip messages that don't need a reply, like newsletters or notifications. Every reply is a draft for you to review before it's sent.",
+    // Mirrors the Email Reply Drafter config form: Email account, Knowledge
+    // Sources, Email Filters, Instructions, Recurring Schedule.
     questions: [
       {
-        id: "q_tone",
-        prompt: "What tone should replies use?",
-        helpText: "This sets the overall voice of every drafted reply.",
+        id: "q_account",
+        prompt: "Which inbox should I read and draft replies from?",
+        helpText:
+          "Select the email account I'll use, e.g. M365 (Outlook) or Gmail.",
       },
       {
-        id: "q_scope",
-        prompt: "Which emails should I draft replies for?",
-        helpText: "e.g. all that need a reply, only internal, only from specific senders.",
+        id: "q_knowledge",
+        prompt: "Which knowledge sources should I reference when drafting replies?",
+        helpText:
+          "Add the files or folders I should reference. Leave blank to draft from the email alone.",
         allowMultiple: true,
       },
+      {
+        id: "q_filters",
+        prompt: "Which emails should I read and reply to?",
+        helpText:
+          "Set rules using keywords, senders, or other criteria. Leave blank to check every unread email.",
+        allowMultiple: true,
+      },
+      {
+        id: "q_instructions",
+        prompt: "How should I write the replies?",
+        helpText:
+          "Tell me which emails to handle and how to reply, e.g. keep a polite, professional tone.",
+      },
+      { ...SCHEDULING_QUESTION },
     ],
     uses: 9420,
     type: "Official",
@@ -202,18 +221,30 @@ export const mockAssistants: Assistant[] = [
     imageUrl: "/avatars/template-current-affairs.png",
     greeting:
       "Hi! I gather the latest news on your topics of interest, summarise it, and send a digest to your Outlook inbox. A few quick questions to tailor it.\n\nNote: I pull from reputable news sources, summarise each item with a link to the original, and only send on the schedule you set — no inbox clutter in between.",
+    // Mirrors the Newsletter config form: Topics, News-sources-only, Specify
+    // Sources, Recurring Schedule.
     questions: [
       {
         id: "q_topics",
-        prompt: "Which topics should the newsletter cover?",
-        helpText: "e.g. AI policy, public health, regional affairs.",
+        prompt: "Which topics or themes should the newsletter track?",
+        helpText:
+          "Enter the keywords or themes you want me to track, e.g. AI policy, public health, regional affairs.",
         allowMultiple: true,
       },
       {
-        id: "q_cadence",
-        prompt: "How often should I send it?",
-        helpText: "e.g. daily, every weekday morning, or weekly.",
+        id: "q_news_only",
+        prompt: "Should I pull only from news publications and media outlets?",
+        helpText:
+          "If yes, blogs, forums, and social media posts are excluded.",
       },
+      {
+        id: "q_sources",
+        prompt: "Are there specific websites I should check?",
+        helpText:
+          "List the exact sites, e.g. straitstimes.com or channelnewsasia.com. Leave blank to let me pick from recommended sources.",
+        allowMultiple: true,
+      },
+      { ...SCHEDULING_QUESTION },
     ],
     uses: 3540,
     type: "Community",

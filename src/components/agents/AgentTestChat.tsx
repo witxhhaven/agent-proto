@@ -473,7 +473,7 @@ export function AgentTestChat({
           onChange={setValue}
           onSubmit={sendFree}
           disabled={intakeActive || busy}
-          showClassification={false}
+          showTools={false}
           placeholder={
             intakeActive
               ? "Answer the questions above to continue…"

@@ -18,6 +18,15 @@ import { withSchedulingQuestion } from "@/data/onboarding";
 // v2: knowledge base reshaped to named sources (file upload / Drive / SharePoint).
 const KEY = "prototype:v2";
 
+// Shared My Agents quota: counts agents you've ADDED (saved from the marketplace)
+// plus agents you've switched ON (active created agents). The same number shows
+// on both My Agents tabs and is enforced at agent creation (AgentEditor).
+export const AGENT_CAP = 15;
+
+// Same idea for scheduled tasks: max number switched ON at once. Enforced at the
+// quota badge (Scheduled page) and at schedule creation (ScheduleCreate).
+export const SCHEDULE_CAP = 10;
+
 export interface StoreState {
   assistants: Assistant[];
   agents: Agent[];
@@ -136,6 +145,11 @@ function ensureHydrated() {
 // even if an older persisted state predates them. Scoped to seed-agent ids only,
 // so creator agents are left untouched (WYSIWYG). Existing greetings are kept.
 const SEED_AGENTS_BY_ID = new Map(seedAgents.map((a) => [a.id, a]));
+// Same idea for the marketplace catalog: keep the non-user-editable display
+// fields (avatar image, greeting, onboarding questions) in sync with the source
+// data, so older persisted state picks up newly-added avatars/copy without a
+// reset. User flags (favorited/saved/etc.) on the persisted entry are preserved.
+const MOCK_ASSISTANTS_BY_ID = new Map(mockAssistants.map((a) => [a.id, a]));
 function ensureSeedDefaults(s: StoreState): StoreState {
   return {
     ...s,
@@ -146,6 +160,16 @@ function ensureSeedDefaults(s: StoreState): StoreState {
         ...a,
         questions: withSchedulingQuestion(a.questions ?? []),
         greeting: a.greeting ?? seed.greeting,
+      };
+    }),
+    assistants: s.assistants.map((a) => {
+      const seed = MOCK_ASSISTANTS_BY_ID.get(a.id);
+      if (!seed) return a;
+      return {
+        ...a,
+        imageUrl: seed.imageUrl,
+        greeting: seed.greeting,
+        questions: seed.questions,
       };
     }),
   };

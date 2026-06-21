@@ -1,29 +1,14 @@
 "use client";
 
-import { useState } from "react";
 import {
   ActionIcon,
   Box,
   Group,
-  Menu,
   Paper,
   Textarea,
   Tooltip,
-  Button,
 } from "@mantine/core";
-import {
-  IconPaperclip,
-  IconArrowUp,
-  IconShieldCheck,
-  IconChevronDown,
-} from "@tabler/icons-react";
-import type { DataClassification } from "@/types";
-
-const CLASSIFICATION_OPTIONS: DataClassification[] = [
-  "C(CE)/SN",
-  "Official (Open)",
-  "Restricted",
-];
+import { IconPaperclip, IconArrowUp, IconTools } from "@tabler/icons-react";
 
 export interface ComposerProps {
   value: string;
@@ -32,13 +17,12 @@ export interface ComposerProps {
   placeholder?: string;
   disabled?: boolean;
   autoFocus?: boolean;
-  /** Shows the cosmetic data-classification selector (home + chat). */
-  showClassification?: boolean;
+  /** Shows the (cosmetic) tools button on the left of the composer. */
+  showTools?: boolean;
 }
 
 /**
  * Shared chat composer. Used on the home/welcome screen and in the chat view.
- * The classification selector is cosmetic only — no filtering/enforcement.
  */
 export function Composer({
   value,
@@ -47,11 +31,8 @@ export function Composer({
   placeholder = "Ask me anything…",
   disabled = false,
   autoFocus = false,
-  showClassification = true,
+  showTools = true,
 }: ComposerProps) {
-  const [classification, setClassification] =
-    useState<DataClassification>("C(CE)/SN");
-
   function submit() {
     const trimmed = value.trim();
     if (!trimmed || disabled) return;
@@ -85,29 +66,12 @@ export function Composer({
               <IconPaperclip size={18} />
             </ActionIcon>
           </Tooltip>
-          {showClassification && (
-            <Menu position="bottom-start" withinPortal>
-              <Menu.Target>
-                <Button
-                  variant="light"
-                  color="brand-blue"
-                  size="xs"
-                  radius="sm"
-                  leftSection={<IconShieldCheck size={14} />}
-                  rightSection={<IconChevronDown size={14} />}
-                >
-                  {classification}
-                </Button>
-              </Menu.Target>
-              <Menu.Dropdown>
-                <Menu.Label>Data classification</Menu.Label>
-                {CLASSIFICATION_OPTIONS.map((c) => (
-                  <Menu.Item key={c} onClick={() => setClassification(c)}>
-                    {c}
-                  </Menu.Item>
-                ))}
-              </Menu.Dropdown>
-            </Menu>
+          {showTools && (
+            <Tooltip label="Tools (mock)">
+              <ActionIcon variant="subtle" color="gray" aria-label="Tools">
+                <IconTools size={18} />
+              </ActionIcon>
+            </Tooltip>
           )}
         </Group>
         <ActionIcon

@@ -41,6 +41,13 @@ export function AgentMentionInput({
   useEffect(() => {
     agentsRef.current = agents;
   }, [agents]);
+  // Mentions can reference marketplace assistants (e.g. Newsletter, Email Reply
+  // Drafter) which aren't in state.agents — resolve those for the pill avatar.
+  const assistants = useStore((s) => s.assistants);
+  const assistantsRef = useRef(assistants);
+  useEffect(() => {
+    assistantsRef.current = assistants;
+  }, [assistants]);
 
   const editorRef = useRef<HTMLDivElement>(null);
   const lastEmitted = useRef<string>("");
@@ -88,7 +95,9 @@ export function AgentMentionInput({
     iconName: string;
     bgColor: string;
   }): PillAgent {
-    const live = agentsRef.current.find((a) => a.id === seg.agentId);
+    const live =
+      agentsRef.current.find((a) => a.id === seg.agentId) ??
+      assistantsRef.current.find((a) => a.id === seg.agentId);
     return {
       id: seg.agentId,
       name: live?.name ?? seg.name,
@@ -115,7 +124,10 @@ export function AgentMentionInput({
       if (node.nodeType === Node.TEXT_NODE) {
         segs.push({ type: "text", value: node.textContent ?? "" });
       } else if (node instanceof HTMLElement && node.dataset.agentId) {
-        const a = agentsRef.current.find((x) => x.id === node.dataset.agentId);
+        const id = node.dataset.agentId;
+        const a =
+          agentsRef.current.find((x) => x.id === id) ??
+          assistantsRef.current.find((x) => x.id === id);
         if (a)
           segs.push({
             type: "agent",

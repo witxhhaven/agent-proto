@@ -63,9 +63,11 @@ export function Sidebar({
   const assistants = useStore((s) => s.assistants);
   const agents = useStore((s) => s.agents);
   const favourited = assistants.filter((a) => a.favorited).slice(0, 5);
-  // My Agents count: agents you created + assistants you've saved.
+  // My Agents count: matches the page quota — agents switched ON (active) +
+  // assistants you've saved (added).
   const myAgentsCount =
-    agents.length + assistants.filter((a) => a.saved).length;
+    agents.filter((a) => a.enabled).length +
+    assistants.filter((a) => a.saved).length;
 
   const isActive = (href: string) =>
     pathname === href || pathname.startsWith(href + "/");

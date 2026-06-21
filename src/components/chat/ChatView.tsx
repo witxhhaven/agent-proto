@@ -13,12 +13,14 @@ import {
   Text,
 } from "@mantine/core";
 import { IconPencil } from "@tabler/icons-react";
-import type { Message } from "@/types";
+import type { InstructionContent, Message } from "@/types";
 import { actions, agentFromAssistant, getState, useStore } from "@/lib/store";
 import { createId } from "@/lib/id";
+import { plainTextToInstruction } from "@/lib/instructions";
 import {
   extractSchedule,
   looksLikeSchedule,
+  mockExtractSchedule,
   summariseChatForSchedule,
 } from "@/lib/structured";
 import { streamComplete } from "@/lib/llm";
@@ -144,8 +146,18 @@ export function ChatView({ chatId }: { chatId: string }) {
       // message actually looks like a scheduling request, so normal chats skip
       // the extra round-trip entirely.
       if (looksLikeSchedule(text)) {
-        const agents = getState().agents.map((a) => ({ id: a.id, name: a.name }));
-        const extracted = await extractSchedule(text, agents);
+        // Name pool for linking: owned agents + marketplace assistants (deduped,
+        // since an owned agent also appears as an assistant).
+        const named = new Map<string, { id: string; name: string }>();
+        for (const a of getState().agents) named.set(a.id, { id: a.id, name: a.name });
+        for (const a of getState().assistants)
+          if (!named.has(a.id)) named.set(a.id, { id: a.id, name: a.name });
+        const agents = [...named.values()];
+        // The heuristic already fired, so this IS schedule-ish. If the model
+        // declines (or there's no key), fall back to the deterministic parse so
+        // the schedule card reliably surfaces instead of being silently dropped.
+        let extracted = await extractSchedule(text, agents);
+        if (!extracted.isSchedule) extracted = mockExtractSchedule(text, agents);
         if (extracted.isSchedule) {
           // Document the whole conversation into detailed instructions so the
           // scheduled task captures everything discussed, not just this line.
@@ -162,10 +174,31 @@ export function ChatView({ chatId }: { chatId: string }) {
             convo,
             agent?.name ?? "the assistant"
           );
+          // Lead the instructions with an @mention of the agent involved (the
+          // chat's agent, else any agent named in the message), then the summary.
+          const mentionAgent =
+            agent ??
+            (extracted.agentId
+              ? getState().agents.find((a) => a.id === extracted.agentId)
+              : undefined);
+          const body = plainTextToInstruction(detailed, getState().agents);
+          const instructions: InstructionContent = mentionAgent
+            ? [
+                {
+                  type: "agent",
+                  agentId: mentionAgent.id,
+                  name: mentionAgent.name,
+                  iconName: mentionAgent.iconName,
+                  bgColor: mentionAgent.bgColor,
+                },
+                { type: "text", value: " " },
+                ...body,
+              ]
+            : body;
           const task = actions.createScheduledTask({
             title: extracted.title,
-            instructions: [{ type: "text", value: detailed }],
-            agentId: agent?.id ?? extracted.agentId ?? null,
+            instructions,
+            agentId: mentionAgent?.id ?? extracted.agentId ?? null,
             knowledgeFileRef: null,
             timing: extracted.timing,
             enabled: true,
