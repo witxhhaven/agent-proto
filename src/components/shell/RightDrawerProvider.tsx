@@ -4,10 +4,12 @@ import {
   createContext,
   useCallback,
   useContext,
+  useEffect,
   useMemo,
   useState,
   type ReactNode,
 } from "react";
+import { usePathname } from "next/navigation";
 
 interface RightDrawerOpts {
   title?: string;
@@ -44,6 +46,16 @@ export function RightDrawerProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const close = useCallback(() => setIsOpen(false), []);
+
+  // The drawer (e.g. AI assist) belongs to the page that opened it. Close it on
+  // any route change so it doesn't leak onto Connectors, Scheduled, Marketplace,
+  // etc. Clearing content also drops the previous page's drawer from memory.
+  const pathname = usePathname();
+  useEffect(() => {
+    setIsOpen(false);
+    setContent(null);
+    setTitle(undefined);
+  }, [pathname]);
 
   const api = useMemo<RightDrawerApi>(
     () => ({ open, close, isOpen, content, title, width }),

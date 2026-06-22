@@ -390,10 +390,12 @@ export function AgentEditor({
               </Field>
 
               <Field label="Description">
-                <TextInput
+                <Textarea
                   placeholder="Short description shown on the marketplace card"
                   value={draft.description}
                   onChange={(e) => patch({ description: e.currentTarget.value })}
+                  autosize
+                  minRows={2}
                 />
               </Field>
 
