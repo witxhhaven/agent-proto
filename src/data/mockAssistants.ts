@@ -14,7 +14,7 @@ export const mockAssistants: Assistant[] = [
     name: "Policy Brief Writer",
     description:
       "Draft policy papers and cabinet memos with proper structure, framing, and recommendations.",
-    owner: "GovTech",
+    owner: "PMO (GovTech)",
     category: "Writing",
     tags: ["policy", "writing", "memo"],
     iconName: "IconFileText",
@@ -48,7 +48,7 @@ export const mockAssistants: Assistant[] = [
     category: "Communication",
     tags: ["email", "replies", "tone"],
     iconName: "IconMail",
-    bgColor: "#2563EB",
+    bgColor: "#E9ECEF",
     imageUrl: "/avatars/template-email-reply.png",
     greeting:
       "Hi! I scan your unread emails and draft replies grounded in your knowledge sources. Let's set a couple of preferences first.\n\nNote: I only read emails from the past 24 hours, and I skip messages that don't need a reply, like newsletters or notifications. Every reply is a draft for you to review before it's sent.",
@@ -94,7 +94,7 @@ export const mockAssistants: Assistant[] = [
     name: "Press Release Drafter",
     description:
       "Create press releases and media statements for public announcements in your house style.",
-    owner: "GovTech",
+    owner: "MDDI (GovTech)",
     category: "Writing",
     tags: ["press", "media", "comms"],
     iconName: "IconNews",
@@ -124,7 +124,7 @@ export const mockAssistants: Assistant[] = [
     name: "Slide Deck Generator",
     description:
       "Turn an outline or document into a structured slide deck with speaker notes.",
-    owner: "GovTech",
+    owner: "IMDA (GovTech)",
     category: "Productivity",
     tags: ["slides", "deck", "presentation"],
     iconName: "IconChartBar",
@@ -153,7 +153,7 @@ export const mockAssistants: Assistant[] = [
     name: "Deep Research Assistant",
     description:
       "Conduct comprehensive research across multiple sources and synthesize the findings into a cited brief.",
-    owner: "GovTech",
+    owner: "MTI (GovTech)",
     category: "Research",
     tags: ["research", "sources", "synthesis"],
     iconName: "IconSearch",
@@ -183,7 +183,7 @@ export const mockAssistants: Assistant[] = [
     name: "Data Insights Analyzer",
     description:
       "Analyze datasets and surface trends, outliers, and plain-language insights with charts.",
-    owner: "Quanta",
+    owner: "DOS (GovTech)",
     category: "Data & Analytics",
     tags: ["data", "charts", "analysis"],
     iconName: "IconChartBar",
@@ -217,7 +217,7 @@ export const mockAssistants: Assistant[] = [
     category: "Research",
     tags: ["news", "digest", "newsletter"],
     iconName: "IconBolt",
-    bgColor: "#D97706",
+    bgColor: "#E9ECEF",
     imageUrl: "/avatars/template-current-affairs.png",
     greeting:
       "Hi! I gather the latest news on your topics of interest, summarise it, and send a digest to your Outlook inbox. A few quick questions to tailor it.\n\nNote: I pull from reputable news sources, summarise each item with a link to the original, and only send on the schedule you set — no inbox clutter in between.",
@@ -256,7 +256,7 @@ export const mockAssistants: Assistant[] = [
     name: "Knowledge Q&A",
     description:
       "Ask questions across your knowledge base and get accurate, grounded answers instantly.",
-    owner: "GovTech",
+    owner: "PSD (GovTech)",
     category: "Productivity",
     tags: ["q&a", "knowledge", "answers"],
     iconName: "IconMessage",
@@ -286,7 +286,7 @@ export const mockAssistants: Assistant[] = [
     name: "Meeting Notes Summarizer",
     description:
       "Turns raw meeting transcripts into crisp notes and clear action items.",
-    owner: "GovTech",
+    owner: "MOM (GovTech)",
     category: "Productivity",
     tags: ["meetings", "summary", "notes"],
     iconName: "IconFileText",
@@ -314,7 +314,7 @@ export const mockAssistants: Assistant[] = [
     id: "asst_calendar_planner",
     name: "Calendar Planner",
     description: "Finds meeting times and drafts agendas across your week.",
-    owner: "GovTech",
+    owner: "MOE (GovTech)",
     category: "Productivity",
     tags: ["calendar", "scheduling", "agenda"],
     iconName: "IconCalendar",
@@ -342,7 +342,7 @@ export const mockAssistants: Assistant[] = [
     id: "asst_idea_coach",
     name: "Idea Coach",
     description: "Brainstorms and pressure-tests ideas with structured prompts.",
-    owner: "GovTech",
+    owner: "MOH (GovTech)",
     category: "Productivity",
     tags: ["ideas", "brainstorm", "coaching"],
     iconName: "IconBulb",
@@ -370,7 +370,7 @@ export const mockAssistants: Assistant[] = [
     id: "asst_blog_writer",
     name: "Blog Post Writer",
     description: "Expands an outline into a structured, on-voice blog draft.",
-    owner: "Wordsmith",
+    owner: "NLB (GovTech)",
     category: "Writing",
     tags: ["blog", "content", "writing"],
     iconName: "IconWand",

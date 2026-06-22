@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import {
   Alert,
+  Box,
   Button,
   Divider,
   Group,
@@ -225,23 +226,25 @@ export function ScheduleCreate({
   // agent creation chooser.
   const chooserBody = (
     <Stack gap="md">
-      <Group align="flex-end" gap="xs" wrap="nowrap">
+      <Box pos="relative">
         <Textarea
           placeholder="e.g. Send me a news digest every weekday at 8am"
           value={aiPrompt}
           onChange={(e) => setAiPrompt(e.currentTarget.value)}
           autosize
-          minRows={2}
-          style={{ flex: 1 }}
+          minRows={3}
+          styles={{ input: { paddingBottom: 48 } }}
         />
         <Button
+          pos="absolute"
+          style={{ right: 8, bottom: 8 }}
           leftSection={aiLoading ? undefined : <IconSparkles size={16} />}
           onClick={runAi}
           disabled={aiLoading || !aiPrompt.trim()}
         >
           {aiLoading ? <TypingDots /> : "Draft"}
         </Button>
-      </Group>
+      </Box>
 
       <Divider label="or" labelPosition="center" />
 

@@ -50,7 +50,7 @@ h1, h2, h3,
   border: 1px solid var(--mantine-color-gray-4);
   border-radius: var(--mantine-radius-sm);
   padding: 8px 12px;
-  font-size: var(--mantine-font-size-sm);
+  font-size: var(--mantine-font-size-md); /* 16px */
   line-height: 1.6;
   white-space: pre-wrap;
   overflow-wrap: anywhere;

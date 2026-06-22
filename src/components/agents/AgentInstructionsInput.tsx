@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { InstructionContent } from "@/types";
+import type { Agent, InstructionContent } from "@/types";
 import { useStore } from "@/lib/store";
 import { plainTextToInstruction } from "@/lib/instructions";
 import { AgentMentionInput } from "@/components/scheduled/AgentMentionInput";
@@ -32,9 +32,31 @@ export function AgentInstructionsInput({
   placeholder?: string;
 }) {
   const agents = useStore((s) => s.agents);
+  const assistants = useStore((s) => s.assistants);
+  // Resolve mentions against the SAME catalog the picker offers (your agents +
+  // marketplace assistants), deduped by id — otherwise a mentioned assistant
+  // round-trips back to literal "@Name" text instead of re-rendering as a pill.
+  const mentionable = useMemo<
+    Pick<Agent, "id" | "name" | "iconName" | "bgColor">[]
+  >(() => {
+    const map = new Map<
+      string,
+      Pick<Agent, "id" | "name" | "iconName" | "bgColor">
+    >();
+    for (const a of [...agents, ...assistants]) {
+      if (!map.has(a.id))
+        map.set(a.id, {
+          id: a.id,
+          name: a.name,
+          iconName: a.iconName,
+          bgColor: a.bgColor,
+        });
+    }
+    return [...map.values()];
+  }, [agents, assistants]);
   const content = useMemo(
-    () => plainTextToInstruction(value, agents),
-    [value, agents]
+    () => plainTextToInstruction(value, mentionable),
+    [value, mentionable]
   );
 
   return (

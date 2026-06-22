@@ -211,8 +211,12 @@ export function Sidebar({
                     variant="light"
                     color="gray"
                     size="sm"
-                    circle
-                    style={{ fontVariantNumeric: "tabular-nums" }}
+                    radius="xl"
+                    style={{
+                      fontVariantNumeric: "tabular-nums",
+                      minWidth: 20,
+                      paddingInline: 6,
+                    }}
                   >
                     {myAgentsCount}
                   </Badge>

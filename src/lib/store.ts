@@ -266,6 +266,20 @@ export const actions = {
     });
   },
 
+  // Unpublish = pull the agent back out of the marketplace. It stays in My
+  // Agents; only its owned marketplace listing is removed.
+  unpublishAgent(id: string): void {
+    setState({
+      ...state,
+      agents: state.agents.map((a) =>
+        a.id === id ? { ...a, published: false } : a
+      ),
+      assistants: state.assistants.filter(
+        (as) => !(as.id === id && as.isOwned)
+      ),
+    });
+  },
+
   updateAgent(id: string, patch: Partial<Agent>): void {
     const agents = state.agents.map((a) =>
       a.id === id ? { ...a, ...patch } : a

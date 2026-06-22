@@ -26,6 +26,8 @@ import {
   IconMessage,
   IconClock,
   IconTrash,
+  IconUsers,
+  IconCrownFilled,
 } from "@tabler/icons-react";
 import { notifications } from "@mantine/notifications";
 import type { Agent, Assistant } from "@/types";
@@ -72,11 +74,19 @@ export function AgentCard(props: AgentCardProps) {
   const favoriteId =
     props.variant === "marketplace" ? props.assistant.id : props.agent.id;
 
-  // Agents you created get a special gradient border in the marketplace.
+  // Agents you created (your own marketplace listings + the manage tab).
   const isOwnedAgent =
     props.variant === "marketplace" && !!props.assistant.isOwned;
-  // The same gradient border marks your own agents on the My Agents page too.
-  const gradientBorder = isOwnedAgent || props.variant === "manage";
+
+  // Author label shown under the title (with an author icon, no "by"). Agents you
+  // built read "You (GovTech)"; others show just the agency (the "(GovTech)"
+  // suffix is dropped, e.g. "PMO (GovTech)" → "PMO", while "GovTech" stays).
+  const builtByYou = isOwnedAgent || props.variant === "manage";
+  const ownerLabel = builtByYou
+    ? "You (GovTech)"
+    : props.variant === "marketplace"
+      ? props.assistant.owner.replace(/\s*\(GovTech\)$/, "")
+      : null;
 
   function startChat() {
     if (props.variant === "marketplace") {
@@ -122,21 +132,9 @@ export function AgentCard(props: AgentCardProps) {
   }
 
   return (
-    <Box
-      style={
-        gradientBorder
-          ? {
-              height: "100%",
-              padding: 2,
-              borderRadius: "calc(var(--mantine-radius-md) + 2px)",
-              background:
-                "linear-gradient(135deg, var(--mantine-color-brand-blue-6) 0%, var(--mantine-color-grape-5) 50%, var(--mantine-color-pink-5) 100%)",
-            }
-          : { height: "100%" }
-      }
-    >
+    <Box style={{ height: "100%" }}>
     <Card
-      withBorder={!gradientBorder}
+      withBorder
       radius="md"
       padding="md"
       style={{ height: "100%" }}
@@ -179,15 +177,22 @@ export function AgentCard(props: AgentCardProps) {
         </Group>
 
         <Stack gap={4} style={{ flex: 1, cursor: "pointer" }} onClick={startChat}>
-          <Text fw={600} lineClamp={1}>
+          <Text fw={700} fz={18} lineClamp={1}>
             {entity.name}
           </Text>
-          {props.variant === "marketplace" && (
-            <Text size="sm" c="dimmed" lineClamp={1}>
-              by {props.assistant.owner}
-            </Text>
+          {ownerLabel && (
+            <Group gap={4} wrap="nowrap" c="dimmed">
+              {builtByYou ? (
+                <IconCrownFilled size={16} color="#D4AF37" />
+              ) : (
+                <IconUsers size={16} stroke={1.8} />
+              )}
+              <Text size="sm" c="dimmed" lineClamp={1}>
+                {ownerLabel}
+              </Text>
+            </Group>
           )}
-          <Text fz={16} c="dimmed" lineClamp={3}>
+          <Text fz={16} lineClamp={3}>
             {entity.description}
           </Text>
         </Stack>

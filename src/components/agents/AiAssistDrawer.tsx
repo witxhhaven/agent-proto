@@ -112,8 +112,8 @@ export function AiAssistDrawer({
         <Stack gap="sm" pb="md">
           {messages.length === 0 && !loading && (
             <Text size="sm" c="dimmed">
-              Describe what this agent should do and I&apos;ll draft its settings
-              and intake questions, then ask a few questions to refine it.
+              I&apos;ll turn your description into settings and intake questions,
+              then help you refine.
             </Text>
           )}
           {messages.map((m) => (

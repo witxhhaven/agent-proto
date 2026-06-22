@@ -6,7 +6,6 @@ import {
   ActionIcon,
   Box,
   Button,
-  Card,
   Container,
   Group,
   Modal,
@@ -23,7 +22,7 @@ import {
   IconArrowLeft,
   IconSparkles,
   IconWorldUpload,
-  IconSparkles as IconCustom,
+  IconWorldOff,
   IconId,
   IconBrain,
   IconMessageQuestion,
@@ -43,6 +42,7 @@ import tabClasses from "@/app/agents/segmented-tabs.module.css";
 import type { AgentDraft } from "@/lib/agentDraft";
 import { withSchedulingQuestion } from "@/data/onboarding";
 import { createId } from "@/lib/id";
+import { fireConfetti } from "@/lib/confetti";
 
 export interface AgentDraftState {
   templateId: AgentTemplateId;
@@ -117,8 +117,17 @@ export function AgentEditor({
   // even before the first save. On create we persist the agent under this id.
   const [assistKey] = useState(() => agentId ?? createId("agent"));
   const [publishOpen, setPublishOpen] = useState(false);
+  const [unpublishOpen, setUnpublishOpen] = useState(false);
   const [autoOffOpen, setAutoOffOpen] = useState(false);
+  // Success modal shown after a brand-new agent is created or an agent is
+  // published (each fires confetti). Kind tailors the copy.
+  const [successKind, setSuccessKind] = useState<"created" | "published" | null>(
+    null
+  );
   const seededRef = useRef(false);
+  // Whether this agent has been persisted yet: drives New (Create Agent only)
+  // vs Created (Save changes + Publish) UI. Becomes true right after first save.
+  const isCreated = !!savedId;
   // Shared My Agents quota: agents you've added (saved) + agents switched on.
   const usedCount = useStore(
     (s) =>
@@ -154,9 +163,17 @@ export function AgentEditor({
         onApply={applyAiDraft}
         initialMessage={seed}
       />,
-      { title: "AI assist" }
+      { title: "Describe your agent" }
     );
   }
+
+  // Keep the confetti spraying for as long as the success modal is open; the
+  // cleanup stops it when the modal closes (successKind → null) or on unmount.
+  useEffect(() => {
+    if (successKind === null) return;
+    const stop = fireConfetti();
+    return stop;
+  }, [successKind]);
 
   // Arriving from the "Draft with AI" modal: open the assist chat seeded with
   // the creator's description so it fills the form on the first turn.
@@ -215,6 +232,16 @@ export function AgentEditor({
     return created.id;
   }
 
+  // Create Agent = the first save for a brand-new agent. On success, celebrate
+  // with the confetti + "Agent created" modal (unless the cap kicked in, in which
+  // case persist() already surfaced the switched-off explainer instead).
+  function createAgent() {
+    const wouldBeCapped = draft.enabled && usedCount >= AGENT_CAP;
+    const id = persist();
+    if (!id || wouldBeCapped) return;
+    setSuccessKind("created");
+  }
+
   // Save = keep it in My Agents as a draft (not in the Marketplace yet).
   function save() {
     const id = persist();
@@ -251,10 +278,18 @@ export function AgentEditor({
     actions.publishAgent(id);
     patch({ published: true });
     setPublishOpen(false);
+    setSuccessKind("published");
+  }
+
+  // Unpublish = remove the agent from the Marketplace (it stays in My Agents).
+  function confirmUnpublish() {
+    if (savedId) actions.unpublishAgent(savedId);
+    patch({ published: false });
+    setUnpublishOpen(false);
     notifications.show({
-      title: "Submitted to the Marketplace",
-      message: `${draft.name.trim()} is now live in the Agent Marketplace.`,
-      color: "brand-blue",
+      title: "Removed from the Marketplace",
+      message: `${draft.name.trim() || "This agent"} is no longer published. It's still in My Agents.`,
+      color: "gray",
     });
   }
 
@@ -313,59 +348,84 @@ export function AgentEditor({
           </Tabs.List>
         </Box>
         <Group gap="xs" wrap="nowrap">
-          <Tooltip label={drawer.isOpen ? "Hide AI assist" : "AI assist"}>
-            <ActionIcon
-              variant={drawer.isOpen ? "filled" : "subtle"}
-              color="brand-blue"
-              onClick={() => (drawer.isOpen ? drawer.close() : openAssist())}
-              aria-label="Toggle AI assist"
-            >
-              <IconSparkles size={18} />
-            </ActionIcon>
-          </Tooltip>
-          <Button
-            variant="outline"
-            onClick={save}
-            styles={{
-              root: {
-                borderColor: "#000",
-                color: "#000",
-                backgroundColor: "#fff",
-              },
-            }}
-          >
-            Save
-          </Button>
-          <Button
-            leftSection={<IconWorldUpload size={16} />}
-            onClick={openPublish}
-            disabled={draft.published}
-          >
-            {draft.published ? "Published" : "Publish"}
-          </Button>
+          {isCreated ? (
+            <>
+              <Button
+                variant="outline"
+                onClick={save}
+                styles={{
+                  root: {
+                    borderColor: "#000",
+                    color: "#000",
+                    backgroundColor: "#fff",
+                  },
+                }}
+              >
+                Save changes
+              </Button>
+              {draft.published ? (
+                <Button
+                  color="red"
+                  leftSection={<IconWorldOff size={16} />}
+                  onClick={() => setUnpublishOpen(true)}
+                >
+                  Unpublish
+                </Button>
+              ) : (
+                <Button
+                  leftSection={<IconWorldUpload size={16} />}
+                  onClick={openPublish}
+                >
+                  Publish
+                </Button>
+              )}
+            </>
+          ) : (
+            <Button onClick={createAgent}>Create Agent</Button>
+          )}
         </Group>
       </Group>
+
+      {/* Build-with-AI toggle — sticks just below the header, anchored to the
+          editor column's right edge so it follows the header on scroll and moves
+          inward (never covering the drawer) when AI assist is open. */}
+      <Box
+        px="md"
+        style={{
+          position: "sticky",
+          top: 64,
+          zIndex: 150,
+          height: 0,
+          display: "flex",
+          justifyContent: "flex-end",
+          pointerEvents: "none",
+        }}
+      >
+        <Tooltip
+          label={drawer.isOpen ? "Hide" : "Describe your agent"}
+          position="left"
+          withArrow
+        >
+          <ActionIcon
+            variant={drawer.isOpen ? "filled" : "default"}
+            color="brand-blue"
+            size="lg"
+            radius="xl"
+            onClick={() => (drawer.isOpen ? drawer.close() : openAssist())}
+            aria-label="Toggle Describe your agent"
+            style={{
+              pointerEvents: "auto",
+              boxShadow: "var(--mantine-shadow-sm)",
+            }}
+          >
+            <IconSparkles size={20} />
+          </ActionIcon>
+        </Tooltip>
+      </Box>
 
       <Container size="md" py="xl">
           <Tabs.Panel value="settings">
             <Stack gap="xl">
-              {isNew && draft.templateId === "scratch" && (
-                <Card withBorder radius="md" padding="lg" bg="gray.0">
-                  <Group align="flex-start" gap="md" wrap="nowrap">
-                    <ThemeIcon variant="light" size={48} radius="md" color="brand-blue">
-                      <IconCustom size={26} />
-                    </ThemeIcon>
-                    <Stack gap={2}>
-                      <Text fw={600}>Custom Agent</Text>
-                      <Text size="sm" c="dimmed">
-                        Start from a blank agent and configure it yourself, or let
-                        the AI assistant help you set it up.
-                      </Text>
-                    </Stack>
-                  </Group>
-                </Card>
-              )}
-
               <SectionHeader
                 icon={<IconId size={26} />}
                 label="Profile"
@@ -505,6 +565,35 @@ export function AgentEditor({
       </Modal>
 
       <Modal
+        opened={unpublishOpen}
+        onClose={() => setUnpublishOpen(false)}
+        title="Remove from the Agent Marketplace?"
+        centered
+        size="md"
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            Unpublishing removes{" "}
+            <strong>{draft.name.trim() || "this agent"}</strong> from the Agent
+            Marketplace so others can no longer discover or use it. It stays in
+            My Agents, and you can publish it again anytime.
+          </Text>
+          <Group justify="flex-end" gap="xs">
+            <Button variant="default" onClick={() => setUnpublishOpen(false)}>
+              Cancel
+            </Button>
+            <Button
+              color="red"
+              leftSection={<IconWorldOff size={16} />}
+              onClick={confirmUnpublish}
+            >
+              Unpublish
+            </Button>
+          </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
         opened={autoOffOpen}
         onClose={() => setAutoOffOpen(false)}
         title="Maximum active agents reached"
@@ -523,6 +612,45 @@ export function AgentEditor({
           <Group justify="flex-end">
             <Button onClick={() => setAutoOffOpen(false)}>Got it</Button>
           </Group>
+        </Stack>
+      </Modal>
+
+      <Modal
+        opened={successKind !== null}
+        onClose={() => setSuccessKind(null)}
+        centered
+        size="lg"
+        withCloseButton={false}
+      >
+        <Stack align="center" gap="md" py="md">
+          <Stack align="center" gap={8}>
+            {/* Row 1: avatar on its own row */}
+            <AgentAvatar
+              iconName={draft.iconName}
+              bgColor={draft.bgColor}
+              imageUrl={draft.imageUrl}
+              size={56}
+            />
+            {/* Row 2: name */}
+            <Text fw={700} fz={30} lh={1.1} ta="center" lineClamp={2}>
+              {draft.name.trim() || "Your agent"}
+            </Text>
+            {/* Row 3: status */}
+            <Text fw={600} fz={20}>
+              {successKind === "published"
+                ? "has been published"
+                : "has been created"}
+            </Text>
+          </Stack>
+          {/* Explanation */}
+          <Text fz={16} c="dimmed" ta="center">
+            {successKind === "published"
+              ? "It's now live in the Agent Marketplace for others to discover and use."
+              : "It's been added to My Agents. Switch it on to start using it in chats and tasks."}
+          </Text>
+          <Button size="md" px="xl" onClick={() => setSuccessKind(null)}>
+            Got it
+          </Button>
         </Stack>
       </Modal>
     </Box>

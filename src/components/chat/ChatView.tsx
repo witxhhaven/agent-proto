@@ -6,10 +6,8 @@ import {
   Badge,
   Box,
   Button,
-  Card,
   Container,
   Group,
-  Loader,
   Paper,
   Stack,
   Text,
@@ -374,7 +372,7 @@ export function ChatView({ chatId }: { chatId: string }) {
               </div>
             ))}
             {intakeActive && <IntakeFlow agent={agent!} chat={chat} />}
-            {schedulePending && <ScheduleLoadingCard />}
+            {schedulePending && <AssistantMessage text="" />}
             {showStandaloneLoader && <AssistantMessage text="" />}
           </Stack>
           {/* Reserves space so the latest message can scroll to the top. */}
@@ -444,15 +442,3 @@ function ScheduleCardWrapper({ taskId }: { taskId: string }) {
 }
 
 /** Placeholder shown while a schedule is being assembled. */
-function ScheduleLoadingCard() {
-  return (
-    <Card withBorder radius="md" padding="md">
-      <Group gap="sm" wrap="nowrap">
-        <Loader size="sm" color="brand-blue" />
-        <Text size="sm" c="dimmed">
-          Setting up your schedule…
-        </Text>
-      </Group>
-    </Card>
-  );
-}
