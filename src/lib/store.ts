@@ -4,6 +4,7 @@ import { useSyncExternalStore } from "react";
 import type {
   Agent,
   Assistant,
+  AssistMessage,
   Chat,
   Message,
   ScheduledRunLog,
@@ -32,6 +33,8 @@ export interface StoreState {
   agents: Agent[];
   scheduledTasks: ScheduledTask[];
   chats: Chat[];
+  /** Per-agent AI-assist (drafting) conversation, keyed by agent id. */
+  assistChats: Record<string, AssistMessage[]>;
 }
 
 // --- seed -----------------------------------------------------------------
@@ -105,6 +108,7 @@ function seedState(): StoreState {
     agents,
     scheduledTasks: clone(seedScheduledTasks),
     chats: [],
+    assistChats: {},
   };
 }
 
@@ -153,6 +157,8 @@ const MOCK_ASSISTANTS_BY_ID = new Map(mockAssistants.map((a) => [a.id, a]));
 function ensureSeedDefaults(s: StoreState): StoreState {
   return {
     ...s,
+    // Backfill for state persisted before per-agent assist history existed.
+    assistChats: s.assistChats ?? {},
     agents: s.agents.map((a) => {
       const seed = SEED_AGENTS_BY_ID.get(a.id);
       if (!seed) return a;
@@ -223,11 +229,13 @@ export const actions = {
   // agents -----------------------------------------------------------------
   // Save = create the agent in My Agents only. It does NOT enter the marketplace
   // until publishAgent() is called (Save vs Publish split).
-  createAgent(input: Omit<Agent, "id" | "createdAt">): Agent {
+  // `id` may be supplied so the editor can reserve it up-front (e.g. to key the
+  // agent's AI-assist history before the first save). Defaults to a fresh id.
+  createAgent(input: Omit<Agent, "id" | "createdAt">, id?: string): Agent {
     const agent: Agent = {
       ...input,
       published: input.published ?? false,
-      id: createId("agent"),
+      id: id ?? createId("agent"),
       createdAt: new Date().toISOString(),
     };
     setState({
@@ -281,11 +289,32 @@ export const actions = {
   },
 
   deleteAgent(id: string): void {
+    const assistChats = { ...state.assistChats };
+    delete assistChats[id];
     setState({
       ...state,
       agents: state.agents.filter((a) => a.id !== id),
       assistants: state.assistants.filter((as) => as.id !== id),
+      assistChats,
     });
+  },
+
+  // AI-assist drafting history, kept per agent id ---------------------------
+  appendAssistMessage(agentKey: string, msg: AssistMessage): void {
+    const existing = state.assistChats[agentKey] ?? [];
+    setState({
+      ...state,
+      assistChats: {
+        ...state.assistChats,
+        [agentKey]: [...existing, msg],
+      },
+    });
+  },
+
+  clearAssistChat(agentKey: string): void {
+    const assistChats = { ...state.assistChats };
+    delete assistChats[agentKey];
+    setState({ ...state, assistChats });
   },
 
   toggleAgentEnabled(id: string): void {
@@ -385,6 +414,17 @@ export const actions = {
       ...state,
       chats: state.chats.map((c) =>
         c.id === chatId ? { ...c, messages: [...c.messages, message] } : c
+      ),
+    });
+  },
+
+  removeMessage(chatId: string, messageId: string): void {
+    setState({
+      ...state,
+      chats: state.chats.map((c) =>
+        c.id === chatId
+          ? { ...c, messages: c.messages.filter((m) => m.id !== messageId) }
+          : c
       ),
     });
   },

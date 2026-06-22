@@ -10,6 +10,7 @@ import {
   instructionToPlainText,
   plainTextToInstruction,
 } from "@/lib/instructions";
+import { TypingDots } from "@/components/common/TypingDots";
 import { AgentMentionInput } from "./AgentMentionInput";
 import { ScheduleBuilder } from "./ScheduleBuilder";
 
@@ -118,15 +119,21 @@ export function ScheduleForm({
             <Button
               variant="subtle"
               size="compact-xs"
-              leftSection={<IconSparkles size={14} />}
+              leftSection={improving ? undefined : <IconSparkles size={14} />}
               onClick={improve}
-              loading={improving}
-              disabled={!instructionText.trim()}
+              disabled={improving || !instructionText.trim()}
             >
-              Improve with AI
+              {improving ? <TypingDots h={14} /> : "Improve with AI"}
             </Button>
           </Group>
         </Group>
+        <Text size="xs" c="dimmed">
+          Describe what should happen on each run. Type{" "}
+          <Text span fw={600} c="dimmed">
+            @
+          </Text>{" "}
+          to mention an agent and hand the task to it.
+        </Text>
         <AgentMentionInput
           value={value.instructions}
           onChange={(instructions) => {

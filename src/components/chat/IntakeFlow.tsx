@@ -17,12 +17,15 @@ import {
   looksLikeSchedule,
   mockExtractSchedule,
   synthesizeScheduleInstruction,
+  generateScheduleTitle,
+  generateChatTitle,
 } from "@/lib/structured";
 import { streamComplete } from "@/lib/llm";
 import { plainTextToInstruction } from "@/lib/instructions";
 import { createId } from "@/lib/id";
 import { summariseTitle } from "@/lib/text";
 import { LoadingState } from "@/components/common/LoadingState";
+import { TypingDots } from "@/components/common/TypingDots";
 import { IntakeQuestionCard } from "./IntakeQuestionCard";
 
 type Status =
@@ -107,6 +110,25 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
           : "Got it, thanks for those details."
       );
 
+      // Thinking indicator: an empty assistant bubble renders the three dots.
+      // The title + schedule generation below makes several LLM calls in a row;
+      // without this the chat sits silent and looks frozen until everything
+      // lands at once. Cleared as soon as the next real bubble is ready.
+      const thinkingId = createId("msg");
+      actions.appendMessage(chat.id, {
+        id: thinkingId,
+        role: "assistant",
+        content: "",
+        createdAt: new Date().toISOString(),
+        kind: "text",
+      });
+      let thinkingCleared = false;
+      const clearThinking = () => {
+        if (thinkingCleared) return;
+        thinkingCleared = true;
+        actions.removeMessage(chat.id, thinkingId);
+      };
+
       // Persist answers + chat title now, but keep intake "in progress" so the
       // composer stays disabled until the result is ready.
       const firstAnswer = answered[0];
@@ -115,10 +137,21 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
             .filter(Boolean)
             .join(", ")
         : agent.name;
+      // Synthetic transcript from the answers, for LLM title generation.
+      const qaHistory = answered.map((a) => ({
+        role: "user" as const,
+        content: `${a.prompt}: ${[...a.selectedOptionLabels, a.freeText]
+          .filter(Boolean)
+          .join(", ")}`,
+      }));
+      const chatTitle =
+        chat.title === "Untitled"
+          ? await generateChatTitle(qaHistory, agent.name)
+          : chat.title;
       actions.updateChat(chat.id, {
         intakeAnswers: finalAnswers,
         ...(chat.title === "Untitled"
-          ? { title: summariseTitle(titleSeed) }
+          ? { title: chatTitle || summariseTitle(titleSeed) }
           : {}),
       });
 
@@ -182,8 +215,13 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
               { type: "text", value: " " },
               ...body,
             ];
+            const schedTitle = await generateScheduleTitle(qaHistory, agent.name);
+            clearThinking();
             const newTask = actions.createScheduledTask({
-              title: extracted.title || `${agent.name} — scheduled run`,
+              title:
+                schedTitle ||
+                extracted.title ||
+                `${agent.name} — scheduled run`,
               instructions,
               agentId: agent.id,
               knowledgeFileRef: null,
@@ -205,6 +243,10 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
           // scheduling is best-effort — never block the intake result
         }
       }
+
+      // Clear the thinking bubble (no-op if a schedule was created above) so the
+      // "Working on it" message takes its place instead of stacking under it.
+      clearThinking();
 
       await wait(800);
 
@@ -348,6 +390,20 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
   }
 
   if (status === "generating" || status === "idle") {
+    // Right after the hardcoded scheduling MCQ is answered, show the same
+    // three-dot "thinking" indicator as the chat (rather than the spinner)
+    // before the result streams in.
+    const lastAnswer = answers[answers.length - 1];
+    if (
+      status === "idle" &&
+      lastAnswer?.questionId === SCHEDULING_QUESTION_ID
+    ) {
+      return (
+        <Stack gap={6}>
+          <TypingDots />
+        </Stack>
+      );
+    }
     return <LoadingState title="Preparing your questions…" />;
   }
   if (status === "error") {

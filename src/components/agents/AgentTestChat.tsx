@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Box, Button, Group, Paper, Stack, Text } from "@mantine/core";
+import { Box, Button, Card, Group, Loader, Paper, Stack, Text } from "@mantine/core";
 import { IconRefresh } from "@tabler/icons-react";
 import type {
   IntakeAnswer,
@@ -15,6 +15,7 @@ import {
   extractSchedule,
   summariseChatForSchedule,
   synthesizeScheduleInstruction,
+  generateScheduleTitle,
 } from "@/lib/structured";
 import { streamComplete } from "@/lib/llm";
 import { createId } from "@/lib/id";
@@ -84,6 +85,7 @@ export function AgentTestChat({
     intake.length > 0 ? "idle" : "complete"
   );
   const [busy, setBusy] = useState(false);
+  const [schedulePending, setSchedulePending] = useState(false);
   const [value, setValue] = useState("");
 
   // Mirror the real chat: pin each new user message to the top of the viewport
@@ -166,6 +168,7 @@ export function AgentTestChat({
         try {
           const extracted = await extractSchedule(schedText, []);
           if (extracted.isSchedule) {
+            setSchedulePending(true);
             const taskAnswers = answered
               .filter(
                 (a) =>
@@ -182,9 +185,20 @@ export function AgentTestChat({
               { name, description, instructions },
               taskAnswers
             );
+            const qaHistory = taskAnswers.map((a) => ({
+              role: "user" as const,
+              content: `${a.prompt}: ${a.answer}`,
+            }));
+            const schedTitle = await generateScheduleTitle(
+              qaHistory,
+              name || "the assistant"
+            );
             const task: ScheduledTask = {
               id: createId("tmsg-task"),
-              title: extracted.title || `${name || "Agent"} — scheduled run`,
+              title:
+                schedTitle ||
+                extracted.title ||
+                `${name || "Agent"} — scheduled run`,
               instructions: [
                 { type: "text", value: bodyText || description || "" },
               ],
@@ -197,11 +211,14 @@ export function AgentTestChat({
               runHistory: [],
               origin: "chat",
             };
+            setSchedulePending(false);
             addTaskMsg("I've also set this up to run on a schedule:", task);
             await new Promise((r) => setTimeout(r, 400));
           }
         } catch {
           // scheduling is best-effort — never block the intake result
+        } finally {
+          setSchedulePending(false);
         }
       }
 
@@ -332,13 +349,18 @@ export function AgentTestChat({
       if (looksLikeSchedule(text)) {
         const extracted = await extractSchedule(text, []);
         if (extracted.isSchedule) {
+          setSchedulePending(true);
           const detailed = await summariseChatForSchedule(
+            history,
+            name || "the assistant"
+          );
+          const schedTitle = await generateScheduleTitle(
             history,
             name || "the assistant"
           );
           const task: ScheduledTask = {
             id: createId("tmsg-task"),
-            title: extracted.title,
+            title: schedTitle || extracted.title,
             instructions: [{ type: "text", value: detailed }],
             agentId: null,
             knowledgeFileRef: null,
@@ -373,6 +395,7 @@ export function AgentTestChat({
       );
     } finally {
       setBusy(false);
+      setSchedulePending(false);
     }
   }
 
@@ -434,6 +457,17 @@ export function AgentTestChat({
                 )}
               </Box>
             )
+          )}
+
+          {schedulePending && (
+            <Card withBorder radius="md" padding="md">
+              <Group gap="sm" wrap="nowrap">
+                <Loader size="sm" color="brand-blue" />
+                <Text size="sm" c="dimmed">
+                  Setting up your schedule…
+                </Text>
+              </Group>
+            </Card>
           )}
 
           {(status === "generating" || status === "idle") &&

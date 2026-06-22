@@ -24,6 +24,7 @@ import { actions, getState, SCHEDULE_CAP, useStore } from "@/lib/store";
 import { extractSchedule } from "@/lib/structured";
 import { plainTextToInstruction, instructionToPlainText } from "@/lib/instructions";
 import { EmptyState } from "@/components/common/EmptyState";
+import { TypingDots } from "@/components/common/TypingDots";
 import tabClasses from "@/app/agents/segmented-tabs.module.css";
 import { ScheduleRunRow } from "./ScheduleRunRow";
 import {
@@ -70,6 +71,7 @@ export function ScheduleCreate({
   const [draft, setDraft] = useState<ScheduleDraft>(makeInitial);
   const [aiPrompt, setAiPrompt] = useState("");
   const [aiLoading, setAiLoading] = useState(false);
+  const [saving, setSaving] = useState(false);
   const [testResponse, setTestResponse] = useState<string | null>(null);
   const [tab, setTab] = useState<string | null>(initialTab);
   const [autoOffOpen, setAutoOffOpen] = useState(false);
@@ -165,7 +167,8 @@ export function ScheduleCreate({
     );
   }
 
-  function save() {
+  async function save() {
+    if (saving) return;
     if (!draft.title.trim()) {
       notifications.show({
         title: "Title required",
@@ -181,33 +184,41 @@ export function ScheduleCreate({
       knowledgeFileRef: draft.knowledgeFileRef,
       timing: draft.timing,
     };
-    if (isEdit && task) {
-      actions.updateScheduledTask(task.id, fields);
-      notifications.show({
-        title: "Schedule updated",
-        message: `${fields.title} has been updated.`,
-        color: "brand-blue",
-      });
-    } else {
-      // Active-schedule cap: if all slots are full, create it switched OFF and
-      // explain via a modal instead of silently overflowing the quota.
-      const full = activeCount >= SCHEDULE_CAP;
-      actions.createScheduledTask({
-        ...fields,
-        enabled: !full,
-        origin: "schedule-page",
-      });
-      if (full) {
-        setAutoOffOpen(true);
-        return; // keep the modal mounted; the cap modal handles closing
+    // Show the three-dot indicator while the schedule is being "created"
+    // (mock work — no backend), matching the chat/AI-assist loading style.
+    setSaving(true);
+    try {
+      await new Promise((resolve) => setTimeout(resolve, 700));
+      if (isEdit && task) {
+        actions.updateScheduledTask(task.id, fields);
+        notifications.show({
+          title: "Schedule updated",
+          message: `${fields.title} has been updated.`,
+          color: "brand-blue",
+        });
+      } else {
+        // Active-schedule cap: if all slots are full, create it switched OFF and
+        // explain via a modal instead of silently overflowing the quota.
+        const full = activeCount >= SCHEDULE_CAP;
+        actions.createScheduledTask({
+          ...fields,
+          enabled: !full,
+          origin: "schedule-page",
+        });
+        if (full) {
+          setAutoOffOpen(true);
+          return; // keep the modal mounted; the cap modal handles closing
+        }
+        notifications.show({
+          title: "Schedule created",
+          message: `${fields.title} is now scheduled.`,
+          color: "brand-blue",
+        });
       }
-      notifications.show({
-        title: "Schedule created",
-        message: `${fields.title} is now scheduled.`,
-        color: "brand-blue",
-      });
+      onClose();
+    } finally {
+      setSaving(false);
     }
-    onClose();
   }
 
   // Step 1 (create only): describe-to-draft, or start from scratch — mirrors the
@@ -224,12 +235,11 @@ export function ScheduleCreate({
           style={{ flex: 1 }}
         />
         <Button
-          leftSection={<IconSparkles size={16} />}
+          leftSection={aiLoading ? undefined : <IconSparkles size={16} />}
           onClick={runAi}
-          loading={aiLoading}
-          disabled={!aiPrompt.trim()}
+          disabled={aiLoading || !aiPrompt.trim()}
         >
-          Draft
+          {aiLoading ? <TypingDots /> : "Draft"}
         </Button>
       </Group>
 
@@ -266,10 +276,12 @@ export function ScheduleCreate({
           Test response now
         </Button>
         <Group gap="xs">
-          <Button variant="subtle" color="gray" onClick={onClose}>
+          <Button variant="subtle" color="gray" onClick={onClose} disabled={saving}>
             Cancel
           </Button>
-          <Button onClick={save}>Save</Button>
+          <Button onClick={save} disabled={saving}>
+            {saving ? <TypingDots /> : "Save"}
+          </Button>
         </Group>
       </Group>
     </Stack>
@@ -314,6 +326,7 @@ export function ScheduleCreate({
       }
       size="xl"
       centered
+      styles={{ title: { fontSize: "1.25rem", fontWeight: 700 } }}
     >
       {!isEdit && step === "choose" ? (
         chooserBody

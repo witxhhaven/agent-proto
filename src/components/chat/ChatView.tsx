@@ -6,8 +6,10 @@ import {
   Badge,
   Box,
   Button,
+  Card,
   Container,
   Group,
+  Loader,
   Paper,
   Stack,
   Text,
@@ -22,10 +24,13 @@ import {
   looksLikeSchedule,
   mockExtractSchedule,
   summariseChatForSchedule,
+  generateScheduleTitle,
+  generateChatTitle,
 } from "@/lib/structured";
 import { streamComplete } from "@/lib/llm";
 import { summariseTitle } from "@/lib/text";
 import { AgentAvatar } from "@/components/common/AgentAvatar";
+import { TypingDots } from "@/components/common/TypingDots";
 import { Composer } from "./Composer";
 import { Markdown } from "./Markdown";
 import { IntakeFlow } from "./IntakeFlow";
@@ -49,6 +54,9 @@ export function ChatView({ chatId }: { chatId: string }) {
   );
   const [value, setValue] = useState("");
   const [busy, setBusy] = useState(false);
+  // True while a schedule is being assembled (extract → summarise → title), so
+  // the thread shows a "Setting up your schedule…" card meanwhile.
+  const [schedulePending, setSchedulePending] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const [spacerH, setSpacerH] = useState(0);
   const [pinnedId, setPinnedId] = useState<string | null>(null);
@@ -139,8 +147,31 @@ export function ChatView({ chatId }: { chatId: string }) {
   // Generate the AI reply for a message that is ALREADY in the thread. Split out
   // from send() so it can be triggered both by typing here and by arriving from
   // the home composer (which appends the user message before navigating).
+  // After the first user message, upgrade the chat title with an LLM-generated
+  // one (mock fallback = heuristic). Fire-and-forget so it never blocks replies.
+  async function upgradeChatTitle() {
+    const fresh = getState().chats.find((c) => c.id === chat!.id);
+    if (!fresh) return;
+    const userTurns = fresh.messages.filter((m) => m.role === "user").length;
+    if (userTurns !== 1) return;
+    const conv = fresh.messages
+      .filter((m) => m.role === "user" || m.role === "assistant")
+      .map((m) => ({
+        role:
+          m.role === "assistant" ? ("assistant" as const) : ("user" as const),
+        content: m.content,
+      }));
+    try {
+      const title = await generateChatTitle(conv, agent?.name ?? "the assistant");
+      if (title) actions.updateChat(chat!.id, { title });
+    } catch {
+      // keep the heuristic title
+    }
+  }
+
   async function respond(text: string) {
     setBusy(true);
+    void upgradeChatTitle();
     try {
       // 1. schedule extraction — only run the (slower) LLM extractor when the
       // message actually looks like a scheduling request, so normal chats skip
@@ -159,6 +190,7 @@ export function ChatView({ chatId }: { chatId: string }) {
         let extracted = await extractSchedule(text, agents);
         if (!extracted.isSchedule) extracted = mockExtractSchedule(text, agents);
         if (extracted.isSchedule) {
+          setSchedulePending(true);
           // Document the whole conversation into detailed instructions so the
           // scheduled task captures everything discussed, not just this line.
           const convo = (getState().chats.find((c) => c.id === chat!.id)?.messages ?? [])
@@ -195,8 +227,12 @@ export function ChatView({ chatId }: { chatId: string }) {
                 ...body,
               ]
             : body;
+          const schedTitle = await generateScheduleTitle(
+            convo,
+            agent?.name ?? "the assistant"
+          );
           const task = actions.createScheduledTask({
-            title: extracted.title,
+            title: schedTitle || extracted.title,
             instructions,
             agentId: mentionAgent?.id ?? extracted.agentId ?? null,
             knowledgeFileRef: null,
@@ -249,6 +285,7 @@ export function ChatView({ chatId }: { chatId: string }) {
       }
     } finally {
       setBusy(false);
+      setSchedulePending(false);
     }
   }
 
@@ -274,7 +311,8 @@ export function ChatView({ chatId }: { chatId: string }) {
   const lastMsg = chat.messages[chat.messages.length - 1];
   const streamingPlaceholder =
     !!lastMsg && lastMsg.role === "assistant" && lastMsg.content === "";
-  const showStandaloneLoader = busy && !streamingPlaceholder && !intakeActive;
+  const showStandaloneLoader =
+    busy && !streamingPlaceholder && !intakeActive && !schedulePending;
 
   return (
     <Box
@@ -336,6 +374,7 @@ export function ChatView({ chatId }: { chatId: string }) {
               </div>
             ))}
             {intakeActive && <IntakeFlow agent={agent!} chat={chat} />}
+            {schedulePending && <ScheduleLoadingCard />}
             {showStandaloneLoader && <AssistantMessage text="" />}
           </Stack>
           {/* Reserves space so the latest message can scroll to the top. */}
@@ -395,21 +434,25 @@ function MessageRow({ message }: { message: Message }) {
 
 /** Borderless, full content-width assistant message (no avatar/name header). */
 function AssistantMessage({ text }: { text: string }) {
-  return <Stack gap={6}>{text ? <Markdown>{text}</Markdown> : <Dots />}</Stack>;
-}
-
-function Dots() {
-  return (
-    <Group gap={4} align="center" h={20}>
-      <span className="typing-dot" />
-      <span className="typing-dot" />
-      <span className="typing-dot" />
-    </Group>
-  );
+  return <Stack gap={6}>{text ? <Markdown>{text}</Markdown> : <TypingDots />}</Stack>;
 }
 
 function ScheduleCardWrapper({ taskId }: { taskId: string }) {
   const task = useStore((s) => s.scheduledTasks.find((t) => t.id === taskId));
   if (!task) return null;
   return <ScheduleCard task={task} compact />;
+}
+
+/** Placeholder shown while a schedule is being assembled. */
+function ScheduleLoadingCard() {
+  return (
+    <Card withBorder radius="md" padding="md">
+      <Group gap="sm" wrap="nowrap">
+        <Loader size="sm" color="brand-blue" />
+        <Text size="sm" c="dimmed">
+          Setting up your schedule…
+        </Text>
+      </Group>
+    </Card>
+  );
 }

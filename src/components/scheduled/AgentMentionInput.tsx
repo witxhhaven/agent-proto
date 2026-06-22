@@ -1,9 +1,16 @@
 "use client";
 
-import { createElement, useEffect, useRef, useState } from "react";
+import { createElement, useEffect, useMemo, useRef, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { Box, Group, Popover, Text, UnstyledButton } from "@mantine/core";
-import type { Agent, InstructionContent } from "@/types";
+import {
+  Box,
+  Group,
+  Popover,
+  ScrollArea,
+  Text,
+  UnstyledButton,
+} from "@mantine/core";
+import type { InstructionContent } from "@/types";
 import { useStore } from "@/lib/store";
 import { AgentAvatar } from "@/components/common/AgentAvatar";
 import { resolveIcon } from "@/components/common/iconMap";
@@ -30,7 +37,7 @@ function serialize(content: InstructionContent): string {
 export function AgentMentionInput({
   value,
   onChange,
-  placeholder = "Describe the task… type @ to mention a saved agent",
+  placeholder = "Describe the task… type @ to mention an agent",
 }: {
   value: InstructionContent;
   onChange: (content: InstructionContent) => void;
@@ -202,7 +209,7 @@ export function AgentMentionInput({
     detectMention();
   }
 
-  function pick(agent: Agent) {
+  function pick(agent: PillAgent) {
     const m = mention.current;
     const el = editorRef.current;
     if (!m || !el || !m.node.parentNode) return closeMenu();
@@ -210,13 +217,7 @@ export function AgentMentionInput({
     const before = full.slice(0, m.at);
     const after = full.slice(m.end);
     const parent = m.node.parentNode;
-    const pill = makePill({
-      id: agent.id,
-      name: agent.name,
-      iconName: agent.iconName,
-      bgColor: agent.bgColor,
-      imageUrl: agent.imageUrl,
-    });
+    const pill = makePill(agent);
     const afterText = after.startsWith(" ") ? after : " " + after;
     const afterNode = document.createTextNode(afterText);
     if (before) parent.insertBefore(document.createTextNode(before), m.node);
@@ -235,11 +236,37 @@ export function AgentMentionInput({
     emit();
   }
 
+  // Everything mentionable: your created agents + saved agents + the full
+  // marketplace catalog, deduped by id (owned agents also appear as assistants)
+  // and sorted alphabetically.
+  const mentionable = useMemo<PillAgent[]>(() => {
+    const map = new Map<string, PillAgent>();
+    const add = (a: {
+      id: string;
+      name: string;
+      iconName: string;
+      bgColor: string;
+      imageUrl?: string;
+    }) => {
+      if (!map.has(a.id))
+        map.set(a.id, {
+          id: a.id,
+          name: a.name,
+          iconName: a.iconName,
+          bgColor: a.bgColor,
+          imageUrl: a.imageUrl,
+        });
+    };
+    agents.forEach(add);
+    assistants.forEach(add);
+    return [...map.values()].sort((x, y) => x.name.localeCompare(y.name));
+  }, [agents, assistants]);
+
   const filtered = query
-    ? agents.filter((a) =>
+    ? mentionable.filter((a) =>
         a.name.toLowerCase().includes(query.toLowerCase())
       )
-    : agents;
+    : mentionable;
 
   return (
     <Popover
@@ -271,25 +298,34 @@ export function AgentMentionInput({
         />
       </Popover.Target>
       <Popover.Dropdown p={4}>
-        {filtered.map((a) => (
-          <UnstyledButton
-            key={a.id}
-            // mousedown (not click) so the editor keeps focus + selection.
-            onMouseDown={(e) => {
-              e.preventDefault();
-              pick(a);
-            }}
-            display="block"
-            w="100%"
-            p="xs"
-            style={{ borderRadius: 6 }}
-          >
-            <Group gap="sm" wrap="nowrap">
-              <AgentAvatar iconName={a.iconName} bgColor={a.bgColor} size={20} />
-              <Text size="sm">{a.name}</Text>
-            </Group>
-          </UnstyledButton>
-        ))}
+        <ScrollArea.Autosize mah={240} type="auto">
+          {filtered.map((a) => (
+            <UnstyledButton
+              key={a.id}
+              // mousedown (not click) so the editor keeps focus + selection.
+              onMouseDown={(e) => {
+                e.preventDefault();
+                pick(a);
+              }}
+              display="block"
+              w="100%"
+              p="xs"
+              style={{ borderRadius: 6 }}
+            >
+              <Group gap="sm" wrap="nowrap">
+                <AgentAvatar
+                  iconName={a.iconName}
+                  bgColor={a.bgColor}
+                  imageUrl={a.imageUrl}
+                  size={20}
+                />
+                <Text size="sm" lineClamp={1}>
+                  {a.name}
+                </Text>
+              </Group>
+            </UnstyledButton>
+          ))}
+        </ScrollArea.Autosize>
       </Popover.Dropdown>
     </Popover>
   );

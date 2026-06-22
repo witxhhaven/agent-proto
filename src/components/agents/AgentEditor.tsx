@@ -113,6 +113,9 @@ export function AgentEditor({
   const drawer = useRightDrawer();
   const [draft, setDraft] = useState<AgentDraftState>(initial);
   const [savedId, setSavedId] = useState<string | null>(agentId ?? null);
+  // Stable id reserved up-front so the AI-assist history is tied to THIS agent,
+  // even before the first save. On create we persist the agent under this id.
+  const [assistKey] = useState(() => agentId ?? createId("agent"));
   const [publishOpen, setPublishOpen] = useState(false);
   const [autoOffOpen, setAutoOffOpen] = useState(false);
   const seededRef = useRef(false);
@@ -146,6 +149,7 @@ export function AgentEditor({
   function openAssist(seed?: string) {
     drawer.open(
       <AiAssistDrawer
+        assistKey={assistKey}
         currentQuestions={draft.questions}
         onApply={applyAiDraft}
         initialMessage={seed}
@@ -206,7 +210,7 @@ export function AgentEditor({
       patch({ enabled: false });
       setAutoOffOpen(true);
     }
-    const created = actions.createAgent(payload);
+    const created = actions.createAgent(payload, assistKey);
     setSavedId(created.id);
     return created.id;
   }

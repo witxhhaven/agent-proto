@@ -12,18 +12,18 @@ import {
   Textarea,
 } from "@mantine/core";
 import { IconArrowUp } from "@tabler/icons-react";
-import type { IntakeQuestion } from "@/types";
+import type { AssistMessage, IntakeQuestion } from "@/types";
 import type { AgentDraft } from "@/lib/agentDraft";
+import { actions, useStore } from "@/lib/store";
 import { assistAgentChat } from "@/lib/structured";
 import { createId } from "@/lib/id";
 
-interface ChatMsg {
-  id: string;
-  role: "user" | "assistant";
-  content: string;
-}
+// Stable empty reference so the store selector never returns a fresh array.
+const EMPTY: AssistMessage[] = [];
 
 export interface AiAssistDrawerProps {
+  /** Agent id this conversation belongs to — history is persisted under it. */
+  assistKey: string;
   currentQuestions: IntakeQuestion[];
   /** Merge the AI's draft into the agent form. Should NOT close the drawer. */
   onApply: (draft: AgentDraft) => void;
@@ -38,11 +38,14 @@ export interface AiAssistDrawerProps {
  * Mock-first (works with no API key); real Claude when a key is present.
  */
 export function AiAssistDrawer({
+  assistKey,
   currentQuestions,
   onApply,
   initialMessage,
 }: AiAssistDrawerProps) {
-  const [messages, setMessages] = useState<ChatMsg[]>([]);
+  // History is persisted per agent in the store, so it survives closing the
+  // drawer and is distinct for each agent.
+  const messages = useStore((s) => s.assistChats[assistKey] ?? EMPTY);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
   const startedRef = useRef(false);
@@ -51,9 +54,13 @@ export function AiAssistDrawer({
   async function send(text: string) {
     const trimmed = text.trim();
     if (!trimmed || loading) return;
-    const userMsg: ChatMsg = { id: createId("m"), role: "user", content: trimmed };
+    const userMsg: AssistMessage = {
+      id: createId("m"),
+      role: "user",
+      content: trimmed,
+    };
     const history = [...messages, userMsg];
-    setMessages(history);
+    actions.appendAssistMessage(assistKey, userMsg);
     setInput("");
     setLoading(true);
     try {
@@ -68,28 +75,27 @@ export function AiAssistDrawer({
         toolIds: result.toolIds,
         questions: result.questions ?? [],
       });
-      setMessages((m) => [
-        ...m,
-        { id: createId("m"), role: "assistant", content: result.reply },
-      ]);
+      actions.appendAssistMessage(assistKey, {
+        id: createId("m"),
+        role: "assistant",
+        content: result.reply,
+      });
     } catch {
-      setMessages((m) => [
-        ...m,
-        {
-          id: createId("m"),
-          role: "assistant",
-          content:
-            "Sorry — I couldn't draft that just now. Try rephrasing or adding more detail.",
-        },
-      ]);
+      actions.appendAssistMessage(assistKey, {
+        id: createId("m"),
+        role: "assistant",
+        content:
+          "Sorry — I couldn't draft that just now. Try rephrasing or adding more detail.",
+      });
     } finally {
       setLoading(false);
     }
   }
 
-  // Auto-submit the seed description exactly once.
+  // Auto-submit the seed description once — but only for a fresh conversation,
+  // so reopening an agent with existing history doesn't re-fire it.
   useEffect(() => {
-    if (initialMessage && !startedRef.current) {
+    if (initialMessage && !startedRef.current && messages.length === 0) {
       startedRef.current = true;
       void send(initialMessage);
     }

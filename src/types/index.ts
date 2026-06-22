@@ -119,6 +119,13 @@ export interface Agent {
   // No `schedule` here — scheduling is a separate ScheduledTask that may wrap this agent.
 }
 
+/** One turn in an agent's AI-assist (drafting) conversation. Persisted per agent. */
+export interface AssistMessage {
+  id: string;
+  role: "user" | "assistant";
+  content: string;
+}
+
 // ====================================================================
 // Intake questions (the AI centerpiece) — unchanged shapes
 // ====================================================================

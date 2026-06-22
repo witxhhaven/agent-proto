@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { callLlm, complete } from "@/lib/llm";
 import { createId } from "@/lib/id";
+import { summariseTitle } from "@/lib/text";
 import { mockTools } from "@/data/mockTools";
 import { mockAgentDraft, type AgentDraft } from "@/lib/agentDraft";
 import type {
@@ -465,7 +466,7 @@ const TIME_RE = /\bat\s+(\d{1,2})(?::(\d{2}))?\s*(am|pm)?/i;
 const DOW_RE =
   /\b(sunday|monday|tuesday|wednesday|thursday|friday|saturday)\b/i;
 const SCHEDULE_KEYWORD_RE =
-  /\b(remind|reminder|schedule|scheduled|recurring|recurrence|repeat(?:ed|edly)?|notify|notification|digest|newsletter|every|each|daily|weekly|monthly|hourly|nightly|quarterly|annually|yearly|tomorrow|tonight|weekday|weekends?|once a|send me|email me|every morning)\b/i;
+  /\b(remind|reminder|schedule|scheduled|recurring|recurrence|repeat(?:ed|edly)?|notify|notification|digest|newsletter|every|each|daily|weekly|monthly|hourly|nightly|quarterly|annually|annual|yearly|biweekly|bi-weekly|bimonthly|fortnightly|fortnight|tomorrow|tonight|weekday|weekends?|(?:once|twice|thrice) a|send me|email me|every morning)\b/i;
 const CLOCK_RE =
   /\b(\d{1,2}\s*(?:am|pm)|\d{1,2}:\d{2}|noon|midnight|morning|afternoon|evening)\b/i;
 const DOW: Record<string, number> = {
@@ -627,4 +628,77 @@ function localImproveInstruction(text: string): string {
   const capped = t.charAt(0).toUpperCase() + t.slice(1);
   const withStop = /[.!?]$/.test(capped) ? capped : `${capped}.`;
   return `${withStop} Include any relevant context and constraints, and present the result clearly and concisely.`;
+}
+
+// ---------------------------------------------------------------------------
+// 6. LLM title generators — short titles for chats & schedules from a transcript
+// ---------------------------------------------------------------------------
+function toTranscript(history: ChatTurn[], agentName: string): string {
+  return history
+    .filter((m) => m.content.trim())
+    .map((m) => `${m.role === "user" ? "User" : agentName}: ${m.content.trim()}`)
+    .join("\n");
+}
+
+function cleanTitle(raw: string, fallback: string): string {
+  const t = raw
+    .trim()
+    .split("\n")[0]
+    .replace(/^["'`]+|["'`]+$/g, "")
+    .replace(/[.\s]+$/, "")
+    .trim();
+  if (!t) return fallback;
+  return t.length > 60 ? summariseTitle(t) : t;
+}
+
+async function llmTitle(
+  transcript: string,
+  instruction: string,
+  fallback: string
+): Promise<string> {
+  if (!transcript.trim()) return fallback;
+  const system =
+    "You write very short, descriptive titles. Output ONLY the title: 3-6 words, Title Case, no quotes, no trailing punctuation.";
+  try {
+    const res = await complete(
+      [{ role: "user", content: `${instruction}\n\n${transcript}` }],
+      system
+    );
+    if (res.text && res.text.trim() && !res.mock) {
+      return cleanTitle(res.text, fallback);
+    }
+  } catch {
+    // fall through to the deterministic fallback
+  }
+  return fallback;
+}
+
+/** Short title for a recurring scheduled task, from the conversation it came from. */
+export async function generateScheduleTitle(
+  history: ChatTurn[],
+  agentName: string
+): Promise<string> {
+  const lastUser = [...history]
+    .reverse()
+    .find((m) => m.role === "user" && m.content.trim());
+  const fallback = summariseTitle(lastUser?.content ?? `${agentName} task`);
+  return llmTitle(
+    toTranscript(history, agentName),
+    "Give a short title for the recurring scheduled task the user wants set up, based on this conversation:",
+    fallback
+  );
+}
+
+/** Short title summarising a chat thread. */
+export async function generateChatTitle(
+  history: ChatTurn[],
+  agentName: string
+): Promise<string> {
+  const firstUser = history.find((m) => m.role === "user" && m.content.trim());
+  const fallback = summariseTitle(firstUser?.content ?? "New chat");
+  return llmTitle(
+    toTranscript(history, agentName),
+    "Give a short title summarising this conversation:",
+    fallback
+  );
 }
