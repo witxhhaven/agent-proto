@@ -151,14 +151,27 @@ export function AgentCard(props: AgentCardProps) {
             {props.variant === "manage" && (
               <Badge
                 variant="light"
-                color={props.agent.published ? "teal" : "gray"}
+                color={props.agent.published ? "green" : "gray"}
                 size="sm"
-                radius="sm"
+                radius="xl"
+                leftSection={
+                  <Box
+                    w={6}
+                    h={6}
+                    style={{
+                      borderRadius: 999,
+                      background: props.agent.published
+                        ? "var(--mantine-color-green-6)"
+                        : "var(--mantine-color-gray-5)",
+                    }}
+                  />
+                }
               >
                 {props.agent.published ? "Published" : "Draft"}
               </Badge>
             )}
-            <Badge variant="light" color="brand-blue" size="sm" radius="sm">
+            {/* Data classification — skeleton/outline tag. */}
+            <Badge variant="outline" color="gray" size="sm" radius="xl">
               {classification}
             </Badge>
             <ActionIcon
