@@ -35,7 +35,8 @@ export function AgentTemplatesModal({
   onScratch,
 }: AgentTemplatesModalProps) {
   const [text, setText] = useState("");
-  const templates = agentTemplates.filter((t) => t.id !== "scratch");
+  // Templates temporarily hidden — see commented block below.
+  // const templates = agentTemplates.filter((t) => t.id !== "scratch");
 
   return (
     <Modal
@@ -79,11 +80,12 @@ export function AgentTemplatesModal({
         </Paper>
 
         <Divider
-          label="Or choose from our templates"
+          label="Or do it yourself"
           labelPosition="left"
           styles={{ label: { fontSize: "14px" } }}
         />
 
+        {/* Templates temporarily hidden.
         <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
           {templates.map((t) => (
             <Card
@@ -108,6 +110,7 @@ export function AgentTemplatesModal({
             </Card>
           ))}
         </SimpleGrid>
+        */}
 
         <Group justify="flex-start">
           <Button

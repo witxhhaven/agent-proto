@@ -2,19 +2,20 @@
 
 import { useEffect, useRef, useState } from "react";
 import {
+  ActionIcon,
   Alert,
-  Box,
   Button,
   Divider,
   Group,
   Modal,
+  Paper,
   Stack,
   Tabs,
   Text,
   Textarea,
 } from "@mantine/core";
 import {
-  IconSparkles,
+  IconArrowUp,
   IconBolt,
   IconPlayerPlay,
   IconPencilPlus,
@@ -225,36 +226,52 @@ export function ScheduleCreate({
   // Step 1 (create only): describe-to-draft, or start from scratch — mirrors the
   // agent creation chooser.
   const chooserBody = (
-    <Stack gap="md">
-      <Box pos="relative">
+    <Stack gap="lg">
+      <Paper withBorder radius="lg" p="sm" shadow="xs">
         <Textarea
           placeholder="e.g. Send me a news digest every weekday at 8am"
           value={aiPrompt}
           onChange={(e) => setAiPrompt(e.currentTarget.value)}
+          variant="unstyled"
           autosize
-          minRows={3}
-          styles={{ input: { paddingBottom: 48 } }}
+          minRows={2}
+          maxRows={8}
+          px="xs"
+          onKeyDown={(e) => {
+            if (e.key === "Enter" && !e.shiftKey && aiPrompt.trim()) {
+              e.preventDefault();
+              runAi();
+            }
+          }}
         />
-        <Button
-          pos="absolute"
-          style={{ right: 8, bottom: 8 }}
-          leftSection={aiLoading ? undefined : <IconSparkles size={16} />}
-          onClick={runAi}
-          disabled={aiLoading || !aiPrompt.trim()}
-        >
-          {aiLoading ? <TypingDots /> : "Draft"}
-        </Button>
-      </Box>
+        <Group justify="flex-end" mt="xs">
+          <ActionIcon
+            variant="filled"
+            size="lg"
+            radius="xl"
+            aria-label="Draft with AI"
+            loading={aiLoading}
+            disabled={!aiPrompt.trim()}
+            onClick={runAi}
+          >
+            <IconArrowUp size={18} />
+          </ActionIcon>
+        </Group>
+      </Paper>
 
-      <Divider label="or" labelPosition="center" />
+      <Divider
+        label="Or do it yourself"
+        labelPosition="left"
+        styles={{ label: { fontSize: "14px" } }}
+      />
 
-      <Group justify="center">
+      <Group justify="flex-start">
         <Button
           variant="default"
           leftSection={<IconPencilPlus size={16} />}
           onClick={() => setStep("form")}
         >
-          Create from scratch
+          Start from scratch
         </Button>
       </Group>
     </Stack>
