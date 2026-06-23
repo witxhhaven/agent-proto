@@ -39,7 +39,7 @@ function ScheduledInner() {
         <Group gap="sm" align="center" wrap="nowrap">
           <Title order={2}>Scheduled</Title>
           <Tooltip
-            label={`You can have up to ${SCHEDULE_CAP} schedules active at a time. Toggle one off to free up a slot.`}
+            label={`You can have up to ${SCHEDULE_CAP} schedules running at a time. Toggle one off to free up a slot.`}
             multiline
             w={240}
             withArrow
@@ -52,7 +52,7 @@ function ScheduledInner() {
               style={{ cursor: "default" }}
               rightSection={<IconInfoCircle size={14} />}
             >
-              {activeCount} of {SCHEDULE_CAP} active
+              {activeCount} of {SCHEDULE_CAP} running
             </Badge>
           </Tooltip>
         </Group>

@@ -26,6 +26,7 @@ import {
   IconWorldOff,
   IconId,
   IconBrain,
+  IconPlug,
   IconMessageQuestion,
 } from "@tabler/icons-react";
 import type {
@@ -498,22 +499,12 @@ export function AgentEditor({
 
               <SectionHeader
                 icon={<IconBrain size={26} />}
-                label="Capabilities"
+                label="Behaviour"
               />
 
               <Field
-                label="Instructions"
-                description="Tell the agent how to behave, its tone, and what to do. Type @ to mention another agent."
-              >
-                <AgentInstructionsInput
-                  value={draft.instructions}
-                  onChange={(instructions) => patch({ instructions })}
-                />
-              </Field>
-
-              <Field
-                label="Response speed"
-                description="How deliberate the agent is when it replies. Faster tiers respond quickly; slower tiers reason more before answering."
+                label="Models"
+                description="The model the agent uses. Faster options respond quickly; slower options reason more before answering."
               >
                 <Select
                   data={SPEED_OPTIONS.map((o) => ({
@@ -545,6 +536,21 @@ export function AgentEditor({
                   }}
                 />
               </Field>
+
+              <Field
+                label="Instructions"
+                description="Tell the agent how to behave, its tone, and what to do. Type @ to mention another agent."
+              >
+                <AgentInstructionsInput
+                  value={draft.instructions}
+                  onChange={(instructions) => patch({ instructions })}
+                />
+              </Field>
+
+              <SectionHeader
+                icon={<IconPlug size={26} />}
+                label="Knowledge & Tools"
+              />
 
               <Field
                 label="Knowledge base"

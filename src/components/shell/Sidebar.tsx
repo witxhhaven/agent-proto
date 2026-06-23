@@ -33,7 +33,7 @@ import {
   IconRefresh,
   IconSelector,
 } from "@tabler/icons-react";
-import { actions, useStore } from "@/lib/store";
+import { actions, AGENT_CAP, useStore } from "@/lib/store";
 import { AgentAvatar } from "@/components/common/AgentAvatar";
 
 interface NavItem {
@@ -213,19 +213,27 @@ export function Sidebar({
               leftSection={<Icon size={18} />}
               rightSection={
                 showCount ? (
-                  <Badge
-                    variant="light"
-                    color="gray"
-                    size="sm"
-                    radius="xl"
-                    style={{
-                      fontVariantNumeric: "tabular-nums",
-                      minWidth: 20,
-                      paddingInline: 6,
-                    }}
+                  <Tooltip
+                    label={`Agents in My Agents using a slot: agents switched on plus Marketplace agents you've saved. Up to ${AGENT_CAP} at a time.`}
+                    position="right"
+                    multiline
+                    w={240}
+                    withArrow
                   >
-                    {myAgentsCount}
-                  </Badge>
+                    <Badge
+                      variant="light"
+                      color="gray"
+                      size="sm"
+                      radius="xl"
+                      style={{
+                        fontVariantNumeric: "tabular-nums",
+                        minWidth: 20,
+                        paddingInline: 6,
+                      }}
+                    >
+                      {myAgentsCount}
+                    </Badge>
+                  </Tooltip>
                 ) : undefined
               }
               active={active}

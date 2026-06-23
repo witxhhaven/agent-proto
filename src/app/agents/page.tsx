@@ -7,8 +7,10 @@ import {
   Button,
   Container,
   Group,
+  List,
   Modal,
   SimpleGrid,
+  Stack,
   Tabs,
   Text,
   Title,
@@ -59,9 +61,23 @@ export default function AgentsPage() {
       <Group gap="sm" align="center" mb="lg" wrap="nowrap">
         <Title order={2}>My Agents</Title>
         <Tooltip
-          label={`This is shared across My Agents: the agents you've added (saved) plus the ones you've switched on. You can have up to ${AGENT_CAP} at a time — switch one off or remove a saved agent to free a slot.`}
+          label={
+            <Stack gap={6}>
+              <Text size="xs" fw={600}>
+                Shared My Agents quota ({AGENT_CAP} max)
+              </Text>
+              <List size="xs" spacing={2} withPadding>
+                <List.Item>Agents you&apos;ve added (saved)</List.Item>
+                <List.Item>Agents you&apos;ve switched on</List.Item>
+              </List>
+              <Text size="xs" c="dimmed">
+                At the cap? Switch one off or remove a saved agent to free a
+                slot.
+              </Text>
+            </Stack>
+          }
           multiline
-          w={260}
+          w={250}
           withArrow
         >
           <Badge
