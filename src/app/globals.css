@@ -65,6 +65,27 @@ h1, h2, h3,
   color: var(--mantine-color-placeholder, #adb5bd);
   pointer-events: none;
 }
+/* Borderless variant of the mention field used inside the chat Composer (the
+   surrounding Paper supplies the border/shadow). Autosizes between ~2 rows and
+   a scrollable max height. */
+.composer-field {
+  width: 100%;
+  min-height: 48px;
+  max-height: 200px;
+  overflow-y: auto;
+  padding: 4px 8px;
+  font-size: var(--mantine-font-size-md);
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  outline: none;
+}
+.composer-field:empty::before {
+  content: attr(data-placeholder);
+  color: var(--mantine-color-placeholder, #adb5bd);
+  pointer-events: none;
+}
+
 .mention-pill {
   display: inline-flex;
   align-items: center;

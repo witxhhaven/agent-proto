@@ -9,6 +9,7 @@ import {
   Container,
   Group,
   Modal,
+  Select,
   Stack,
   Tabs,
   Text,
@@ -27,7 +28,13 @@ import {
   IconBrain,
   IconMessageQuestion,
 } from "@tabler/icons-react";
-import type { Agent, AgentTemplateId, IntakeQuestion, KnowledgeBase } from "@/types";
+import type {
+  Agent,
+  AgentTemplateId,
+  IntakeQuestion,
+  KnowledgeBase,
+  ResponseSpeed,
+} from "@/types";
 import { actions, AGENT_CAP, useStore } from "@/lib/store";
 import { useRightDrawer } from "@/components/shell/RightDrawerProvider";
 import { AgentAvatar } from "@/components/common/AgentAvatar";
@@ -44,6 +51,32 @@ import { withSchedulingQuestion } from "@/data/onboarding";
 import { createId } from "@/lib/id";
 import { fireConfetti } from "@/lib/confetti";
 
+// Response-speed tiers. Cosmetic in this prototype — stored on the agent and
+// shown in the form, but they don't change the mock/LLM call.
+const SPEED_OPTIONS: {
+  value: ResponseSpeed;
+  label: string;
+  description: string;
+}[] = [
+  {
+    value: "instant",
+    label: "⚡ Instant (Fast)",
+    description: "Snappy replies for simple, high-volume tasks.",
+  },
+  {
+    value: "balanced",
+    label: "⚖️ Balanced",
+    description: "A good mix of speed and depth for most work.",
+  },
+  {
+    value: "thinking",
+    label: "🧠 Thinking (Slow)",
+    description: "Takes its time to reason through complex problems.",
+  },
+];
+
+const DEFAULT_SPEED: ResponseSpeed = "balanced";
+
 export interface AgentDraftState {
   templateId: AgentTemplateId;
   name: string;
@@ -52,6 +85,7 @@ export interface AgentDraftState {
   bgColor: string;
   imageUrl?: string;
   greeting: string;
+  responseSpeed: ResponseSpeed;
   instructions: string;
   knowledgeBase: KnowledgeBase;
   toolIds: string[];
@@ -69,6 +103,7 @@ export function emptyDraft(): AgentDraftState {
     bgColor: "#4F46E5",
     imageUrl: undefined,
     greeting: "",
+    responseSpeed: DEFAULT_SPEED,
     instructions: "",
     knowledgeBase: { sources: [] },
     toolIds: [],
@@ -88,6 +123,7 @@ export function draftFromAgent(agent: Agent): AgentDraftState {
     bgColor: agent.bgColor,
     imageUrl: agent.imageUrl,
     greeting: agent.greeting ?? "",
+    responseSpeed: agent.responseSpeed ?? DEFAULT_SPEED,
     instructions: agent.instructions,
     knowledgeBase: agent.knowledgeBase,
     toolIds: agent.toolIds,
@@ -194,6 +230,7 @@ export function AgentEditor({
       bgColor: draft.bgColor,
       imageUrl: draft.imageUrl,
       greeting: draft.greeting.trim() || undefined,
+      responseSpeed: draft.responseSpeed,
       instructions: draft.instructions,
       knowledgeBase: draft.knowledgeBase,
       toolIds: draft.toolIds,
@@ -471,6 +508,41 @@ export function AgentEditor({
                 <AgentInstructionsInput
                   value={draft.instructions}
                   onChange={(instructions) => patch({ instructions })}
+                />
+              </Field>
+
+              <Field
+                label="Response speed"
+                description="How deliberate the agent is when it replies. Faster tiers respond quickly; slower tiers reason more before answering."
+              >
+                <Select
+                  data={SPEED_OPTIONS.map((o) => ({
+                    value: o.value,
+                    label: o.label,
+                  }))}
+                  value={draft.responseSpeed}
+                  onChange={(value) =>
+                    patch({ responseSpeed: (value as ResponseSpeed) ?? DEFAULT_SPEED })
+                  }
+                  allowDeselect={false}
+                  checkIconPosition="right"
+                  renderOption={({ option, checked }) => {
+                    const meta = SPEED_OPTIONS.find((o) => o.value === option.value);
+                    return (
+                      <Group gap="sm" wrap="nowrap" justify="space-between" w="100%">
+                        <Stack gap={0}>
+                          <Text size="sm" fw={checked ? 600 : 500}>
+                            {option.label}
+                          </Text>
+                          {meta && (
+                            <Text size="xs" c="dimmed">
+                              {meta.description}
+                            </Text>
+                          )}
+                        </Stack>
+                      </Group>
+                    );
+                  }}
                 />
               </Field>
 

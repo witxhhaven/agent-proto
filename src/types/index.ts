@@ -100,6 +100,9 @@ export interface AgentTemplate {
   defaultKnowledge?: Partial<KnowledgeBase>;
 }
 
+/** How deliberate the agent's responses are. Cosmetic in this prototype. */
+export type ResponseSpeed = "instant" | "balanced" | "thinking";
+
 export interface Agent {
   id: string;
   templateId: AgentTemplateId;
@@ -109,6 +112,7 @@ export interface Agent {
   bgColor: string; // avatar background color (hex)
   imageUrl?: string; // optional avatar image (e.g. "/avatars/foo.png"); overrides the icon
   greeting?: string; // optional opening message shown when a chat starts (before intake)
+  responseSpeed?: ResponseSpeed; // response depth/speed tier (cosmetic); defaults to "balanced"
   instructions: string;
   knowledgeBase: KnowledgeBase;
   toolIds: string[]; // selected McpTool ids
