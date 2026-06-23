@@ -171,5 +171,9 @@ export const theme = createTheme({
     Modal: {
       defaultProps: { radius: "lg" as const, padding: 32 },
     },
+    // Toggles: no thumb indicator dot, and a green track when switched on.
+    Switch: {
+      defaultProps: { color: "green", withThumbIndicator: false },
+    },
   },
 });
