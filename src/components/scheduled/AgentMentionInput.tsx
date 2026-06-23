@@ -3,13 +3,17 @@
 import { createElement, useEffect, useMemo, useRef, useState } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import {
+  ActionIcon,
   Box,
   Group,
   Popover,
   ScrollArea,
   Text,
+  TextInput,
+  Tooltip,
   UnstyledButton,
 } from "@mantine/core";
+import { IconAt } from "@tabler/icons-react";
 import type { InstructionContent } from "@/types";
 import { useStore } from "@/lib/store";
 import { AgentAvatar } from "@/components/common/AgentAvatar";
@@ -58,10 +62,13 @@ export function AgentMentionInput({
 
   const editorRef = useRef<HTMLDivElement>(null);
   const lastEmitted = useRef<string>("");
-  // The pending "@query" location while the picker is open.
+  // The pending "@query" location while the picker is open (type-trigger only).
   const mention = useRef<{ node: Text; at: number; end: number } | null>(null);
+  // Caret snapshot taken when the @ button steals focus (button-trigger only).
+  const savedRange = useRef<Range | null>(null);
 
   const [opened, setOpened] = useState(false);
+  const [triggerMode, setTriggerMode] = useState<"type" | "button">("type");
   const [query, setQuery] = useState("");
 
   // Pill = a small agent avatar (same look as the cards) + the agent name.
@@ -180,8 +187,25 @@ export function AgentMentionInput({
 
   function closeMenu() {
     mention.current = null;
+    savedRange.current = null;
     setOpened(false);
     setQuery("");
+  }
+
+  // Open the picker from the @ button (no "@" typed): snapshot the caret so the
+  // chosen pill lands where the user was editing.
+  function openFromButton() {
+    const el = editorRef.current;
+    const sel = window.getSelection();
+    if (sel && sel.rangeCount && el && el.contains(sel.anchorNode)) {
+      savedRange.current = sel.getRangeAt(0).cloneRange();
+    } else {
+      savedRange.current = null;
+    }
+    mention.current = null;
+    setTriggerMode("button");
+    setQuery("");
+    setOpened(true);
   }
 
   function detectMention() {
@@ -200,6 +224,7 @@ export function AgentMentionInput({
     const q = before.slice(at + 1);
     if (q.includes("\n")) return closeMenu();
     mention.current = { node: node as Text, at, end: caret };
+    setTriggerMode("type");
     setQuery(q);
     setOpened(true);
   }
@@ -210,27 +235,53 @@ export function AgentMentionInput({
   }
 
   function pick(agent: PillAgent) {
-    const m = mention.current;
     const el = editorRef.current;
-    if (!m || !el || !m.node.parentNode) return closeMenu();
-    const full = m.node.textContent ?? "";
-    const before = full.slice(0, m.at);
-    const after = full.slice(m.end);
-    const parent = m.node.parentNode;
+    if (!el) return closeMenu();
+    el.focus();
     const pill = makePill(agent);
-    const afterText = after.startsWith(" ") ? after : " " + after;
-    const afterNode = document.createTextNode(afterText);
-    if (before) parent.insertBefore(document.createTextNode(before), m.node);
-    parent.insertBefore(pill, m.node);
-    parent.insertBefore(afterNode, m.node);
-    parent.removeChild(m.node);
-    // Caret just after the pill (past the leading space).
-    const sel = window.getSelection();
-    const range = document.createRange();
-    range.setStart(afterNode, 1);
-    range.collapse(true);
-    sel?.removeAllRanges();
-    sel?.addRange(range);
+    const m = mention.current;
+
+    if (triggerMode === "type" && m && m.node.parentNode) {
+      // Replace the typed "@query" with the pill.
+      const parent = m.node.parentNode;
+      const full = m.node.textContent ?? "";
+      const before = full.slice(0, m.at);
+      const after = full.slice(m.end);
+      const afterText = after.startsWith(" ") ? after : " " + after;
+      const afterNode = document.createTextNode(afterText);
+      if (before) parent.insertBefore(document.createTextNode(before), m.node);
+      parent.insertBefore(pill, m.node);
+      parent.insertBefore(afterNode, m.node);
+      parent.removeChild(m.node);
+      // Caret just after the pill (past the leading space).
+      const sel = window.getSelection();
+      const range = document.createRange();
+      range.setStart(afterNode, 1);
+      range.collapse(true);
+      sel?.removeAllRanges();
+      sel?.addRange(range);
+    } else {
+      // Button trigger: insert at the saved caret (or append at the end).
+      const sel = window.getSelection();
+      let range: Range;
+      if (savedRange.current) {
+        range = savedRange.current;
+      } else {
+        range = document.createRange();
+        range.selectNodeContents(el);
+        range.collapse(false);
+      }
+      range.deleteContents();
+      const space = document.createTextNode(" ");
+      range.insertNode(space);
+      range.insertNode(pill);
+      const after = document.createRange();
+      after.setStartAfter(space);
+      after.collapse(true);
+      sel?.removeAllRanges();
+      sel?.addRange(after);
+    }
+
     closeMenu();
     el.focus();
     emit();
@@ -274,30 +325,67 @@ export function AgentMentionInput({
       onChange={(o) => !o && closeMenu()}
       position="bottom-start"
       withinPortal
-      trapFocus={false}
+      trapFocus={triggerMode === "button"}
       shadow="md"
       width={260}
     >
       <Popover.Target>
-        <Box
-          ref={editorRef}
-          contentEditable
-          suppressContentEditableWarning
-          role="textbox"
-          aria-multiline="true"
-          data-placeholder={placeholder}
-          className="mention-field"
-          onInput={onInput}
-          onKeyDown={(e) => {
-            if (opened && e.key === "Escape") {
-              e.preventDefault();
-              closeMenu();
-            }
-          }}
-          onBlur={emit}
-        />
+        <Box pos="relative">
+          <Box
+            ref={editorRef}
+            contentEditable
+            suppressContentEditableWarning
+            role="textbox"
+            aria-multiline="true"
+            data-placeholder={placeholder}
+            className="mention-field"
+            style={{ paddingRight: 40 }}
+            onInput={onInput}
+            onKeyDown={(e) => {
+              if (opened && e.key === "Escape") {
+                e.preventDefault();
+                closeMenu();
+              }
+            }}
+            onBlur={emit}
+          />
+          <Tooltip label="Mention an agent" position="left">
+            <ActionIcon
+              variant="subtle"
+              color="gray"
+              aria-label="Mention an agent"
+              pos="absolute"
+              bottom={6}
+              right={6}
+              onMouseDown={(e) => {
+                // Preserve the field's caret/selection before focus shifts.
+                e.preventDefault();
+                openFromButton();
+              }}
+            >
+              <IconAt size={18} />
+            </ActionIcon>
+          </Tooltip>
+        </Box>
       </Popover.Target>
       <Popover.Dropdown p={4}>
+        {triggerMode === "button" && (
+          <TextInput
+            data-autofocus
+            size="xs"
+            mb={4}
+            placeholder="Search agents…"
+            value={query}
+            onChange={(e) => setQuery(e.currentTarget.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Escape") {
+                e.preventDefault();
+                closeMenu();
+              }
+            }}
+            leftSection={<IconAt size={14} />}
+          />
+        )}
         <ScrollArea.Autosize mah={240} type="auto">
           {filtered.map((a) => (
             <UnstyledButton
