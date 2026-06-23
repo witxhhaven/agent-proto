@@ -6,6 +6,7 @@ import {
   ActionIcon,
   Box,
   Group,
+  Paper,
   Popover,
   ScrollArea,
   Text,
@@ -330,7 +331,7 @@ export function AgentMentionInput({
       width={260}
     >
       <Popover.Target>
-        <Box pos="relative">
+        <Paper withBorder radius="md" p="sm">
           <Box
             ref={editorRef}
             contentEditable
@@ -338,8 +339,8 @@ export function AgentMentionInput({
             role="textbox"
             aria-multiline="true"
             data-placeholder={placeholder}
-            className="mention-field"
-            style={{ paddingLeft: 40 }}
+            className="composer-field"
+            style={{ minHeight: 88, maxHeight: 260 }}
             onInput={onInput}
             onKeyDown={(e) => {
               if (opened && e.key === "Escape") {
@@ -349,24 +350,23 @@ export function AgentMentionInput({
             }}
             onBlur={emit}
           />
-          <Tooltip label="Mention an agent" position="right">
-            <ActionIcon
-              variant="subtle"
-              color="gray"
-              aria-label="Mention an agent"
-              pos="absolute"
-              bottom={6}
-              left={6}
-              onMouseDown={(e) => {
-                // Preserve the field's caret/selection before focus shifts.
-                e.preventDefault();
-                openFromButton();
-              }}
-            >
-              <IconAt size={18} />
-            </ActionIcon>
-          </Tooltip>
-        </Box>
+          <Group mt={4}>
+            <Tooltip label="Mention an agent" position="right">
+              <ActionIcon
+                variant="subtle"
+                color="gray"
+                aria-label="Mention an agent"
+                onMouseDown={(e) => {
+                  // Preserve the field's caret/selection before focus shifts.
+                  e.preventDefault();
+                  openFromButton();
+                }}
+              >
+                <IconAt size={18} />
+              </ActionIcon>
+            </Tooltip>
+          </Group>
+        </Paper>
       </Popover.Target>
       <Popover.Dropdown p={4}>
         {triggerMode === "button" && (
