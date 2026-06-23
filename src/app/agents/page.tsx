@@ -63,14 +63,14 @@ export default function AgentsPage() {
         <Tooltip
           label={
             <Stack gap={6}>
-              <Text size="xs" fw={600}>
+              <Text size="sm" fw={600}>
                 Shared My Agents quota ({AGENT_CAP} max)
               </Text>
-              <List size="xs" spacing={2} withPadding>
+              <List size="sm" spacing={2} withPadding>
                 <List.Item>Agents you&apos;ve added (saved)</List.Item>
                 <List.Item>Agents you&apos;ve switched on</List.Item>
               </List>
-              <Text size="xs" c="dimmed">
+              <Text size="sm" c="dimmed">
                 At the cap? Switch one off or remove a saved agent to free a
                 slot.
               </Text>

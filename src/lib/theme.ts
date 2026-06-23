@@ -163,7 +163,7 @@ export const theme = createTheme({
       styles: {
         tooltip: {
           padding: "8px 12px",
-          fontSize: "var(--mantine-font-size-xs)",
+          fontSize: "var(--mantine-font-size-sm)",
           lineHeight: 1.5,
         },
       },
