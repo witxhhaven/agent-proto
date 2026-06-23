@@ -12,11 +12,13 @@ import {
 } from "@mantine/core";
 import { IconCheck } from "@tabler/icons-react";
 import type { IntakeAnswer, RenderedQuestion } from "@/types";
+import classes from "./IntakeQuestionCard.module.css";
 
 export interface IntakeQuestionCardProps {
   question: RenderedQuestion;
   onAnswer: (answer: IntakeAnswer) => void;
   onSkip: () => void;
+  onSkipAll: () => void;
   onBack: () => void;
   canGoBack: boolean;
 }
@@ -25,6 +27,7 @@ export function IntakeQuestionCard({
   question,
   onAnswer,
   onSkip,
+  onSkipAll,
   onBack,
   canGoBack,
 }: IntakeQuestionCardProps) {
@@ -53,7 +56,7 @@ export function IntakeQuestionCard({
   }
 
   return (
-    <Paper withBorder p="md" radius="md" maw={560}>
+    <Paper withBorder p="md" radius="md" maw={560} className={classes.card}>
       <Stack gap="sm">
         {question.subQuestionOf && (
           <Text size="xs" c="dimmed" tt="uppercase" fw={600}>
@@ -107,18 +110,23 @@ export function IntakeQuestionCard({
         />
 
         <Group justify="space-between">
-          <Button
-            variant="subtle"
-            color="gray"
-            size="xs"
-            disabled={!canGoBack}
-            onClick={onBack}
-          >
-            Back
-          </Button>
+          <Group gap="xs">
+            <Button
+              variant="subtle"
+              color="gray"
+              size="xs"
+              disabled={!canGoBack}
+              onClick={onBack}
+            >
+              Back
+            </Button>
+            <Button variant="subtle" color="gray" size="xs" onClick={onSkipAll}>
+              Skip all
+            </Button>
+          </Group>
           <Group gap="xs">
             <Button variant="subtle" color="gray" size="xs" onClick={onSkip}>
-              Skip
+              Skip this
             </Button>
             <Button size="xs" disabled={!canContinue} onClick={submit}>
               Continue

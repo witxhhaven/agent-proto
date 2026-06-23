@@ -321,6 +321,27 @@ export function AgentTestChat({
     });
   }
 
+  // Skip the current question, any queued follow-ups, and all remaining source
+  // questions — marking each as skipped — then go straight to the result.
+  function handleSkipAll() {
+    const skip = (q: { id: string; prompt: string }): IntakeAnswer => ({
+      questionId: q.id,
+      prompt: q.prompt,
+      selectedOptionLabels: [],
+      skipped: true,
+    });
+    const remaining: IntakeAnswer[] = [
+      ...(current ? [skip(current)] : []),
+      ...queue.map(skip),
+      ...intake.slice(sourceIndex).map(skip),
+    ];
+    const finalAnswers = [...answers, ...remaining];
+    setCurrent(null);
+    setQueue([]);
+    setAnswers(finalAnswers);
+    void finish(finalAnswers);
+  }
+
   function handleBack() {
     const prev = history[history.length - 1];
     if (!prev) return;
@@ -492,6 +513,7 @@ export function AgentTestChat({
               question={current}
               onAnswer={handleAnswer}
               onSkip={handleSkip}
+              onSkipAll={handleSkipAll}
               onBack={handleBack}
               canGoBack={history.length > 0}
             />

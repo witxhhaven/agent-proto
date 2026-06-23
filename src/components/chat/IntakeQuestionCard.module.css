@@ -1,0 +1,28 @@
+/* Subtle pulsing glow so the active MCQ card gently draws the eye. */
+.card {
+  animation: mcqGlow 2.8s ease-in-out infinite;
+}
+
+@keyframes mcqGlow {
+  0%,
+  100% {
+    box-shadow:
+      0 0 0 1px rgba(253, 126, 20, 0.06),
+      0 2px 12px rgba(253, 126, 20, 0.08);
+  }
+  50% {
+    box-shadow:
+      0 0 0 1px rgba(253, 126, 20, 0.14),
+      0 2px 18px rgba(253, 126, 20, 0.2);
+  }
+}
+
+/* Respect users who prefer reduced motion — keep a static subtle glow. */
+@media (prefers-reduced-motion: reduce) {
+  .card {
+    animation: none;
+    box-shadow:
+      0 0 0 1px rgba(253, 126, 20, 0.1),
+      0 2px 16px rgba(253, 126, 20, 0.14);
+  }
+}

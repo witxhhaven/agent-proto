@@ -152,8 +152,9 @@ export function AgentCard(props: AgentCardProps) {
               <Badge
                 variant="light"
                 color={props.agent.published ? "green" : "gray"}
-                size="sm"
+                size="md"
                 radius="xl"
+                tt="uppercase"
                 leftSection={
                   <Box
                     w={6}
@@ -171,7 +172,7 @@ export function AgentCard(props: AgentCardProps) {
               </Badge>
             )}
             {/* Data classification — skeleton/outline tag. */}
-            <Badge variant="outline" color="gray" size="sm" radius="xl">
+            <Badge variant="outline" color="gray" size="md" radius="xl">
               {classification}
             </Badge>
             <ActionIcon

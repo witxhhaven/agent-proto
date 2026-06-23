@@ -214,7 +214,7 @@ export function Sidebar({
               rightSection={
                 showCount ? (
                   <Tooltip
-                    label={`Agents in My Agents using a slot: agents switched on plus Marketplace agents you've saved. Up to ${AGENT_CAP} at a time.`}
+                    label={`The number of agents active for Desk to call on — agents you've switched on plus Marketplace agents you've saved. Up to ${AGENT_CAP} active at a time.`}
                     position="right"
                     multiline
                     w={240}

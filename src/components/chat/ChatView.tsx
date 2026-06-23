@@ -341,7 +341,7 @@ export function ChatView({ chatId }: { chatId: string }) {
               <Text fw={600} lineClamp={1}>
                 {chat.title}
               </Text>
-              <Badge variant="light" color="brand-blue" size="sm" radius="sm">
+              <Badge variant="outline" color="gray" size="md" radius="xl">
                 CCE/SN
               </Badge>
             </Group>
