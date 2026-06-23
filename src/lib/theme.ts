@@ -157,10 +157,15 @@ export const theme = createTheme({
     Paper: {
       defaultProps: { radius: "lg" as const },
     },
-    // Uniform, slightly roomier padding on every tooltip across the app.
+    // Uniform padding + font size on every tooltip across the app, so single-
+    // line and point-form tooltips read consistently.
     Tooltip: {
       styles: {
-        tooltip: { padding: "8px 12px" },
+        tooltip: {
+          padding: "8px 12px",
+          fontSize: "var(--mantine-font-size-xs)",
+          lineHeight: 1.5,
+        },
       },
     },
     Modal: {
