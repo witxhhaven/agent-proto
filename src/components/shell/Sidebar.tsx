@@ -2,6 +2,7 @@
 
 import { useRouter, usePathname } from "next/navigation";
 import Link from "next/link";
+import Image from "next/image";
 import {
   ActionIcon,
   Badge,
@@ -105,10 +106,15 @@ export function Sidebar({
           wrap="nowrap"
         >
           {!collapsed && (
-            <Group gap={6} wrap="nowrap" pl={6}>
-              <Text fw={800} size="md">
-                Desk
-              </Text>
+            <Group gap={8} wrap="nowrap" pl={6}>
+              <Image
+                src="/ai-assistant-logo.png"
+                alt="GOVTECH Desk"
+                width={111}
+                height={40}
+                style={{ display: "block", objectFit: "contain" }}
+                priority
+              />
               <Badge size="xs" variant="light" color="brand-blue" radius="sm">
                 BETA
               </Badge>
