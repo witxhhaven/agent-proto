@@ -157,6 +157,12 @@ export const theme = createTheme({
     Paper: {
       defaultProps: { radius: "lg" as const },
     },
+    // Uniform, slightly roomier padding on every tooltip across the app.
+    Tooltip: {
+      styles: {
+        tooltip: { padding: "8px 12px" },
+      },
+    },
     Modal: {
       defaultProps: { radius: "lg" as const, padding: 32 },
     },
