@@ -339,7 +339,7 @@ export function AgentMentionInput({
             aria-multiline="true"
             data-placeholder={placeholder}
             className="mention-field"
-            style={{ paddingRight: 40 }}
+            style={{ paddingLeft: 40 }}
             onInput={onInput}
             onKeyDown={(e) => {
               if (opened && e.key === "Escape") {
@@ -349,14 +349,14 @@ export function AgentMentionInput({
             }}
             onBlur={emit}
           />
-          <Tooltip label="Mention an agent" position="left">
+          <Tooltip label="Mention an agent" position="right">
             <ActionIcon
               variant="subtle"
               color="gray"
               aria-label="Mention an agent"
               pos="absolute"
               bottom={6}
-              right={6}
+              left={6}
               onMouseDown={(e) => {
                 // Preserve the field's caret/selection before focus shifts.
                 e.preventDefault();
