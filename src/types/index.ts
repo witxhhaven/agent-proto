@@ -49,6 +49,7 @@ export interface McpTool {
   provider: ToolProvider; // LINE 2 text
   providerBrand: "google" | "microsoft"; // -> brand icon in the dropdown line 2
   category?: string; // e.g. "Email", "Calendar", "Files"
+  description?: string; // shown in the info hover-card on a selected tool
 }
 
 // ====================================================================

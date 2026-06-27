@@ -64,21 +64,18 @@ export default function AgentsPage() {
           label={
             <Stack gap={6}>
               <Text size="sm" fw={600}>
-                Shared My Agents quota ({AGENT_CAP} max)
+                Agents active for Desk to call on ({AGENT_CAP} max)
               </Text>
               <List size="sm" spacing={2} withPadding>
-                <List.Item>Agents you&apos;ve added (saved)</List.Item>
                 <List.Item>Agents you&apos;ve switched on</List.Item>
+                <List.Item>Marketplace agents you&apos;ve saved</List.Item>
               </List>
-              <Text size="sm" c="dimmed">
-                At the cap? Switch one off or remove a saved agent to free a
-                slot.
-              </Text>
             </Stack>
           }
           multiline
-          w={250}
+          w={320}
           withArrow
+          styles={{ tooltip: { padding: "14px 16px" } }}
         >
           <Badge
             variant="light"

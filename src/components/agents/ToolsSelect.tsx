@@ -3,11 +3,14 @@
 import { useState } from "react";
 import {
   ActionIcon,
+  Badge,
   CheckIcon,
   Combobox,
   Group,
+  HoverCard,
   Paper,
   PillsInput,
+  SimpleGrid,
   Stack,
   Text,
   useCombobox,
@@ -100,36 +103,87 @@ export function ToolsSelect({ toolIds, onChange }: ToolsSelectProps) {
         </Combobox.Dropdown>
       </Combobox>
 
-      {/* Selected tools render as cards below the field, each removable. */}
+      {/* Added tools live in their own tinted, labelled zone — visually distinct
+          from the search field — laid out as a 2-column grid of removable cards,
+          each with an info hover-card. */}
       {selectedTools.length > 0 && (
-        <Stack gap="xs">
-          {selectedTools.map((tool) => {
-            const Brand = resolveBrandIcon(tool.providerBrand);
-            return (
-              <Paper key={tool.id} withBorder radius="md" p="xs">
-                <Group gap="sm" wrap="nowrap" justify="space-between">
-                  <Stack gap={0}>
-                    <Text size="sm">{tool.name}</Text>
-                    <Group gap={4} wrap="nowrap">
-                      <Brand size={12} />
-                      <Text size="xs" c="dimmed">
-                        {tool.provider}
-                      </Text>
-                    </Group>
-                  </Stack>
-                  <ActionIcon
-                    variant="subtle"
-                    color="gray"
-                    aria-label={`Remove ${tool.name}`}
-                    onClick={() => toggle(tool.id)}
-                  >
-                    <IconX size={16} />
-                  </ActionIcon>
-                </Group>
-              </Paper>
-            );
-          })}
-        </Stack>
+        <Paper withBorder radius="md" p="sm" bg="gray.0">
+          <Group gap={8} mb="xs">
+            <Text size="xs" fw={700} c="dimmed" tt="uppercase">
+              Added tools
+            </Text>
+            <Badge size="sm" variant="light" color="gray" radius="sm">
+              {selectedTools.length}
+            </Badge>
+          </Group>
+          <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="xs">
+            {selectedTools.map((tool) => {
+              const Brand = resolveBrandIcon(tool.providerBrand);
+              return (
+                <Paper key={tool.id} withBorder radius="md" p="xs" bg="white">
+                  <Group gap={4} wrap="nowrap" justify="space-between">
+                    {/* Hovering the name/provider reveals the tool details. */}
+                    <HoverCard
+                      width={250}
+                      shadow="md"
+                      withArrow
+                      position="top"
+                      openDelay={200}
+                    >
+                      <HoverCard.Target>
+                        <Stack
+                          gap={2}
+                          style={{ flex: 1, minWidth: 0, cursor: "help" }}
+                        >
+                          <Text size="sm" lineClamp={1}>
+                            {tool.name}
+                          </Text>
+                          <Group gap={4} wrap="nowrap">
+                            <Brand size={12} />
+                            <Text size="xs" c="dimmed" lineClamp={1}>
+                              {tool.provider}
+                            </Text>
+                          </Group>
+                        </Stack>
+                      </HoverCard.Target>
+                      <HoverCard.Dropdown>
+                        <Stack gap={6}>
+                          <Group gap={6} wrap="nowrap">
+                            <Brand size={14} />
+                            <Text size="sm" fw={600}>
+                              {tool.name}
+                            </Text>
+                          </Group>
+                          <Group gap={6}>
+                            {tool.category && (
+                              <Badge size="xs" variant="light" color="gray">
+                                {tool.category}
+                              </Badge>
+                            )}
+                            <Text size="xs" c="dimmed">
+                              {tool.provider}
+                            </Text>
+                          </Group>
+                          {tool.description && (
+                            <Text size="xs">{tool.description}</Text>
+                          )}
+                        </Stack>
+                      </HoverCard.Dropdown>
+                    </HoverCard>
+                    <ActionIcon
+                      variant="subtle"
+                      color="gray"
+                      aria-label={`Remove ${tool.name}`}
+                      onClick={() => toggle(tool.id)}
+                    >
+                      <IconX size={16} />
+                    </ActionIcon>
+                  </Group>
+                </Paper>
+              );
+            })}
+          </SimpleGrid>
+        </Paper>
       )}
     </Stack>
   );

@@ -29,6 +29,8 @@ export interface AiAssistDrawerProps {
   onApply: (draft: AgentDraft) => void;
   /** When provided, auto-submitted as the first message on mount. */
   initialMessage?: string;
+  /** Notifies the parent while an AI response is in flight (e.g. to overlay the form). */
+  onLoadingChange?: (loading: boolean) => void;
 }
 
 /**
@@ -42,6 +44,7 @@ export function AiAssistDrawer({
   currentQuestions,
   onApply,
   initialMessage,
+  onLoadingChange,
 }: AiAssistDrawerProps) {
   // History is persisted per agent in the store, so it survives closing the
   // drawer and is distinct for each agent.
@@ -105,6 +108,17 @@ export function AiAssistDrawer({
   useEffect(() => {
     endRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, loading]);
+
+  // Mirror the in-flight state up so the parent can overlay the form.
+  useEffect(() => {
+    onLoadingChange?.(loading);
+  }, [loading, onLoadingChange]);
+
+  // Clear the parent's loading flag if the drawer unmounts mid-request.
+  useEffect(() => {
+    return () => onLoadingChange?.(false);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <Stack gap={0} style={{ height: "100%" }}>

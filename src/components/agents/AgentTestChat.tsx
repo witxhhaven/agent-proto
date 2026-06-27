@@ -101,6 +101,20 @@ export function AgentTestChat({
     el?.scrollIntoView({ block: "start", behavior: "smooth" });
   }, [pinnedId]);
 
+  // The Test panel often mounts (seeding the greeting) before the creator has
+  // typed it in Settings, so the greeting message only appeared after a manual
+  // Restart. Re-seed it whenever the greeting changes — but only while the test
+  // is still pristine (no answers given, no user messages), so we never wipe an
+  // in-progress test. Question cards aren't messages, so this is safe mid-intake.
+  const testStarted =
+    answers.length > 0 ||
+    history.length > 0 ||
+    messages.some((m) => m.role === "user");
+  useEffect(() => {
+    if (testStarted) return;
+    setMessages(initialMessages());
+  }, [greeting, testStarted, initialMessages]);
+
   const addMsg = useCallback((role: LocalMsg["role"], text: string) => {
     const id = createId("tmsg");
     setMessages((m) => [...m, { id, role, text }]);
@@ -427,8 +441,9 @@ export function AgentTestChat({
       style={{
         display: "flex",
         flexDirection: "column",
-        height: "calc(100dvh - 220px)",
+        height: "calc(100dvh - 120px)",
         minHeight: 440,
+        overflow: "hidden",
       }}
     >
       <Group justify="space-between" pb="xs">

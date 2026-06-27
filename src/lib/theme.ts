@@ -171,6 +171,21 @@ export const theme = createTheme({
     Modal: {
       defaultProps: { radius: "lg" as const, padding: 32 },
     },
+    // Consistent soft shadow under every floating dropdown surface (account
+    // menu, Select/Combobox lists, popovers, hover cards) so they lift off the
+    // page instead of reading as flat panels.
+    Menu: {
+      defaultProps: { shadow: "md" as const },
+    },
+    Popover: {
+      defaultProps: { shadow: "md" as const },
+    },
+    HoverCard: {
+      defaultProps: { shadow: "md" as const },
+    },
+    Combobox: {
+      defaultProps: { shadow: "md" as const },
+    },
     // Toggles: no thumb indicator dot, and a green track when switched on.
     Switch: {
       defaultProps: { color: "green", withThumbIndicator: false },

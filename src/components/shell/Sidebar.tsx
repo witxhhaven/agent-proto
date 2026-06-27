@@ -20,8 +20,8 @@ import {
 } from "@mantine/core";
 import { notifications } from "@mantine/notifications";
 import {
-  IconCompass,
-  IconRobot,
+  IconBuildingStore,
+  IconRobotFace,
   IconClock,
   IconPlug,
   IconFolderPlus,
@@ -39,13 +39,13 @@ import { AgentAvatar } from "@/components/common/AgentAvatar";
 interface NavItem {
   label: string;
   href: string;
-  icon: typeof IconCompass;
+  icon: typeof IconBuildingStore;
 }
 
 const NAV: NavItem[] = [
   { label: "Connectors", href: "/connectors", icon: IconPlug },
-  { label: "Agent Marketplace", href: "/explore", icon: IconCompass },
-  { label: "My Agents", href: "/agents", icon: IconRobot },
+  { label: "Agent Marketplace", href: "/explore", icon: IconBuildingStore },
+  { label: "My Agents", href: "/agents", icon: IconRobotFace },
   { label: "Scheduled", href: "/scheduled", icon: IconClock },
 ];
 
@@ -331,7 +331,11 @@ export function Sidebar({
         py="xs"
         style={{ borderTop: "1px solid var(--mantine-color-gray-2)" }}
       >
-      <Menu position="top-start" width={220} withinPortal>
+      <Menu
+        position="top-start"
+        width={collapsed ? 220 : "target"}
+        withinPortal
+      >
         <Menu.Target>
           {collapsed ? (
             <Tooltip label="Alvin LEU (GOVTECH)" position="right">
@@ -356,6 +360,7 @@ export function Sidebar({
           ) : (
             <UnstyledButton
               p={6}
+              w="100%"
               style={{ borderRadius: 8 }}
               aria-label="Account menu"
             >

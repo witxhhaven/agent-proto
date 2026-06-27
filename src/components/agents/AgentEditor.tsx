@@ -4,10 +4,13 @@ import { useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import {
   ActionIcon,
+  Anchor,
   Box,
   Button,
   Container,
   Group,
+  List,
+  Loader,
   Modal,
   Select,
   Stack,
@@ -153,6 +156,10 @@ export function AgentEditor({
   // Stable id reserved up-front so the AI-assist history is tied to THIS agent,
   // even before the first save. On create we persist the agent under this id.
   const [assistKey] = useState(() => agentId ?? createId("agent"));
+  // True while the AI-assist chat is generating a response — overlays the form.
+  const [aiLoading, setAiLoading] = useState(false);
+  // "Learn more" explainer (copy + video) for the onboarding questions field.
+  const [learnMoreOpen, setLearnMoreOpen] = useState(false);
   const [publishOpen, setPublishOpen] = useState(false);
   const [unpublishOpen, setUnpublishOpen] = useState(false);
   const [autoOffOpen, setAutoOffOpen] = useState(false);
@@ -199,6 +206,7 @@ export function AgentEditor({
         currentQuestions={draft.questions}
         onApply={applyAiDraft}
         initialMessage={seed}
+        onLoadingChange={setAiLoading}
       />,
       { title: "Describe your agent" }
     );
@@ -463,7 +471,44 @@ export function AgentEditor({
 
       <Container size="md" py="xl">
           <Tabs.Panel value="settings">
-            <Stack gap="xl">
+            <Stack gap="xl" pos="relative">
+              {/* Gray tint over the form while the AI fills it in. The loader
+                  layer spans the form (so it's horizontally centred to the form,
+                  not the viewport) and its sticky child keeps the loader
+                  vertically centred in view as the form scrolls. */}
+              {aiLoading && (
+                <>
+                  <Box
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      zIndex: 50,
+                      backgroundColor: "var(--mantine-color-gray-0)",
+                      opacity: 0.85,
+                    }}
+                  />
+                  <Box
+                    style={{
+                      position: "absolute",
+                      inset: 0,
+                      zIndex: 51,
+                      pointerEvents: "none",
+                    }}
+                  >
+                    <Box
+                      style={{
+                        position: "sticky",
+                        top: "50%",
+                        display: "flex",
+                        justifyContent: "center",
+                        transform: "translateY(-50%)",
+                      }}
+                    >
+                      <Loader color="gray.4" />
+                    </Box>
+                  </Box>
+                </>
+              )}
               <SectionHeader
                 icon={<IconId size={26} />}
                 label="Profile"
@@ -592,7 +637,21 @@ export function AgentEditor({
 
               <Field
                 label="Onboarding questions"
-                description="A quick multiple-choice flow shown when a chat starts, collecting the details this agent needs to perform well."
+                description={
+                  <>
+                    A quick multiple-choice flow shown when a chat starts,
+                    collecting the details this agent needs to perform well.{" "}
+                    <Anchor
+                      component="button"
+                      type="button"
+                      fz="sm"
+                      c="brand-blue.4"
+                      onClick={() => setLearnMoreOpen(true)}
+                    >
+                      Learn more
+                    </Anchor>
+                  </>
+                }
               >
                 <QuestionsEditor
                   questions={draft.questions}
@@ -613,6 +672,62 @@ export function AgentEditor({
           </Tabs.Panel>
       </Container>
       </Tabs>
+
+      <Modal
+        opened={learnMoreOpen}
+        onClose={() => setLearnMoreOpen(false)}
+        title="How onboarding questions work"
+        centered
+        size="lg"
+        styles={{ title: { fontWeight: 700 } }}
+      >
+        <Stack gap="md">
+          <Text size="sm">
+            These questions kick off every new chat. Each one becomes a
+            multiple-choice card (plus a free-text option) so users can quickly
+            give your agent the context it needs.
+          </Text>
+
+          <Box>
+            <Text size="sm" fw={600} mb={6}>
+              Tips for writing good questions
+            </Text>
+            <List size="sm" spacing={4}>
+              <List.Item>
+                Keep each question short and focused on one thing.
+              </List.Item>
+              <List.Item>
+                Only ask what the agent needs to do its job — fewer is better.
+              </List.Item>
+              <List.Item>
+                Order them from broad context to specific details.
+              </List.Item>
+              <List.Item>
+                Write plain questions — the answer options are generated for you.
+              </List.Item>
+              <List.Item>
+                Phrase them neutrally so any answer is a valid one.
+              </List.Item>
+            </List>
+          </Box>
+
+          <Text size="sm">Watch the clip below to see it in action.</Text>
+          <video
+            src="/videos/onboard-q.mp4"
+            autoPlay
+            muted
+            loop
+            playsInline
+            style={{
+              width: "100%",
+              borderRadius: "var(--mantine-radius-md)",
+              display: "block",
+              backgroundColor: "var(--mantine-color-gray-1)",
+              border: "1px solid var(--mantine-color-gray-3)",
+            }}
+          />
+        </Stack>
+      </Modal>
 
       <Modal
         opened={publishOpen}
@@ -766,7 +881,7 @@ function Field({
   label: string;
   icon?: React.ReactNode;
   required?: boolean;
-  description?: string;
+  description?: React.ReactNode;
   children: React.ReactNode;
 }) {
   return (

@@ -54,7 +54,7 @@ const RenderedOptionSchema = z.object({
 const RenderedQuestionSchema = z.object({
   id: z.string(),
   prompt: z.string(),
-  options: z.array(RenderedOptionSchema).min(2).max(6),
+  options: z.array(RenderedOptionSchema).min(2).max(4),
   allowFreeText: z.literal(true),
   allowMultiple: z.boolean(),
   subQuestionOf: z.string().optional(),
@@ -78,7 +78,7 @@ const RENDER_QUESTIONS_JSON_SCHEMA = {
           options: {
             type: "array",
             minItems: 2,
-            maxItems: 6,
+            maxItems: 4,
             items: {
               type: "object",
               properties: {
@@ -126,7 +126,7 @@ export async function renderQuestion(
     toolDescription:
       "Return a UI-renderable multiple-choice version of an agent intake question.",
     system:
-      "You help end-users answer an AI agent's intake questions. Given one raw question, produce a clear multiple-choice version with 2-6 realistic options. Always set allowFreeText true. If the question is broad or compound, split it into up to 3 focused sub-questions (set subQuestionOf to the original id). Reword for clarity but keep the intent. Consider the user's prior answers.",
+      "You help end-users answer an AI agent's intake questions. Given one raw question, produce a clear multiple-choice version with 2-4 realistic options. Always set allowFreeText true. If the question is broad or compound, split it into up to 3 focused sub-questions (set subQuestionOf to the original id). Reword for clarity but keep the intent. Consider the user's prior answers.",
     prompt: `Agent: ${ctx.agentName}\nAbout: ${ctx.agentDescription}\nRaw question (id ${
       question.id
     }): ${question.prompt}\nAllow multiple: ${
