@@ -211,7 +211,7 @@ export function AgentEditor({
         initialMessage={seed}
         onLoadingChange={setAiLoading}
       />,
-      { title: "Describe your agent" }
+      { title: "AI Agent Builder" }
     );
   }
 
@@ -459,7 +459,7 @@ export function AgentEditor({
         }}
       >
         <Tooltip
-          label={drawer.isOpen ? "Hide" : "Describe your agent"}
+          label={drawer.isOpen ? "Hide" : "AI Agent Builder"}
           position="left"
           withArrow
         >
@@ -469,7 +469,7 @@ export function AgentEditor({
             size="lg"
             radius="xl"
             onClick={() => (drawer.isOpen ? drawer.close() : openAssist())}
-            aria-label="Toggle Describe your agent"
+            aria-label="Toggle AI Agent Builder"
             style={{
               pointerEvents: "auto",
               boxShadow: "var(--mantine-shadow-sm)",
