@@ -49,6 +49,9 @@ export interface AgentTestChatProps {
   instructions: string;
   greeting?: string;
   questions: IntakeQuestion[];
+  /** Avatar bits so the test schedule can show the agent @mention chip. */
+  iconName: string;
+  bgColor: string;
 }
 
 /**
@@ -62,6 +65,8 @@ export function AgentTestChat({
   instructions,
   greeting,
   questions,
+  iconName,
+  bgColor,
 }: AgentTestChatProps) {
   const intake = useMemo(
     () => questions.filter((q) => q.prompt.trim()),
@@ -158,13 +163,13 @@ export function AgentTestChat({
       setStatus("processing");
       const answered = finalAnswers.filter((a) => !a.skipped);
       const recap = answered
-        .map((a) => `• ${a.prompt} — ${answerText(a)}`)
+        .map((a) => `- **${a.prompt}** — ${answerText(a)}`)
         .join("\n");
 
       addMsg(
         "assistant",
         recap
-          ? `Got it, thanks for those details. Here's what I've noted:\n${recap}`
+          ? `Got it, thanks for those details. Here's what I've noted:\n\n${recap}`
           : "Got it, thanks for those details."
       );
 
@@ -213,9 +218,20 @@ export function AgentTestChat({
                 schedTitle ||
                 extracted.title ||
                 `${name || "Agent"} — scheduled run`,
-              instructions: [
-                { type: "text", value: bodyText || description || "" },
-              ],
+              // Lead with the agent @mention chip (like the real chat) so the
+              // preview simulates scheduling THIS agent, then the task text.
+              instructions: name.trim()
+                ? [
+                    {
+                      type: "agent",
+                      agentId: "test-agent",
+                      name: name.trim(),
+                      iconName,
+                      bgColor,
+                    },
+                    { type: "text", value: ` ${bodyText || description || ""}` },
+                  ]
+                : [{ type: "text", value: bodyText || description || "" }],
               agentId: null,
               knowledgeFileRef: null,
               timing: extracted.timing,

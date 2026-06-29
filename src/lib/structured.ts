@@ -183,6 +183,7 @@ const IntakeQuestionSchema = z.object({
 const AgentDraftSchema = z.object({
   name: z.string().optional(),
   description: z.string().optional(),
+  greeting: z.string().optional(),
   instructions: z.string().optional(),
   toolIds: z.array(z.string()).optional(),
   questions: z.array(IntakeQuestionSchema).min(1).max(6),
@@ -193,6 +194,7 @@ const AGENT_DRAFT_JSON_SCHEMA = {
   properties: {
     name: { type: "string" },
     description: { type: "string" },
+    greeting: { type: "string" },
     instructions: { type: "string" },
     toolIds: { type: "array", items: { type: "string" } },
     questions: {
@@ -229,7 +231,7 @@ export async function generateAgentDraft(
     toolDescription:
       "Propose settings + intake questions for an AI agent the user is building.",
     system:
-      "You help a creator design an AI agent. From their description, propose a name, a one-line description, system instructions, a few relevant tools (from the provided list only, by id), and a set of intake questions an end-user should answer before the agent starts.",
+      "You help a creator design an AI agent. From their description, propose a name, a one-line description, a friendly greeting message shown as the agent's first chat message (1-2 sentences, plain text, that welcomes the user and leads into the intake questions), system instructions, a few relevant tools (from the provided list only, by id), and a set of intake questions an end-user should answer before the agent starts.",
     prompt: `Description: ${description}\n\nAvailable tools (use ids only):\n${toolList}`,
     mock: () => mockAgentDraft(description, currentQuestions),
   });
@@ -249,6 +251,7 @@ const AssistChatSchema = z.object({
   reply: z.string(),
   name: z.string().optional(),
   description: z.string().optional(),
+  greeting: z.string().optional(),
   instructions: z.string().optional(),
   toolIds: z.array(z.string()).optional(),
   questions: z.array(IntakeQuestionSchema).optional(),
@@ -261,6 +264,7 @@ const ASSIST_CHAT_JSON_SCHEMA = {
     reply: { type: "string" },
     name: { type: "string" },
     description: { type: "string" },
+    greeting: { type: "string" },
     instructions: { type: "string" },
     toolIds: { type: "array", items: { type: "string" } },
     questions: {
@@ -304,7 +308,7 @@ export async function assistAgentChat(
     toolDescription:
       "Continue a conversation that helps a creator build an AI agent, filling in the agent's draft fields each turn.",
     system:
-      "You are an assistant that helps a creator build an AI agent through a short back-and-forth. On EVERY turn: (1) fill in as much of the agent draft as you reasonably can from the conversation so far — a name, a one-line description, practical system instructions, relevant tools (from the provided list, by id only), and 2-5 intake questions an end-user should answer before the agent runs; and (2) write a brief, friendly reply of 2-4 sentences, in plain text with no markdown, that notes what you filled in and asks 1-2 specific clarifying questions to improve the agent. Only include draft fields you can sensibly populate. Always include `reply`.",
+      "You are an assistant that helps a creator build an AI agent through a short back-and-forth. On EVERY turn: (1) fill in as much of the agent draft as you reasonably can from the conversation so far — a name, a one-line description, a friendly greeting message shown as the agent's first chat message (1-2 sentences, plain text, that welcomes the user and leads into the intake questions), practical system instructions, relevant tools (from the provided list, by id only), and 2-5 intake questions an end-user should answer before the agent runs; and (2) write a brief, friendly reply of 2-4 sentences, in plain text with no markdown, that notes what you filled in and asks 1-2 specific clarifying questions to improve the agent. Only include draft fields you can sensibly populate. Always include `reply`.",
     prompt: `Conversation so far:\n${transcript}\n\nAvailable tools (use ids only):\n${toolList}\n\nReturn the updated draft fields and your next reply.`,
     mock: () => mockAssistChat(messages, currentQuestions),
   });

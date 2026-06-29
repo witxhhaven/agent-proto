@@ -4,6 +4,7 @@ import { createId } from "@/lib/id";
 export interface AgentDraft {
   name?: string;
   description?: string;
+  greeting?: string;
   instructions?: string;
   toolIds?: string[];
   questions: IntakeQuestion[];
@@ -34,6 +35,9 @@ export function mockAgentDraft(
   return {
     name,
     description: short || "A helpful agent",
+    greeting: `Hi! I'm ${name}. I can help you with ${
+      topic || "your task"
+    }. To get started, please answer a few quick questions below.`,
     instructions: `You are an assistant that helps with: ${
       topic || "the user's task"
     }. Be clear and concise, ask for missing details, and produce well-structured output. Always confirm constraints before acting.`,

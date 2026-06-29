@@ -74,6 +74,7 @@ export function AiAssistDrawer({
       onApply({
         name: result.name,
         description: result.description,
+        greeting: result.greeting,
         instructions: result.instructions,
         toolIds: result.toolIds,
         questions: result.questions ?? [],

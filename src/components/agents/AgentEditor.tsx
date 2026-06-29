@@ -160,6 +160,8 @@ export function AgentEditor({
   const [aiLoading, setAiLoading] = useState(false);
   // "Learn more" explainer (copy + video) for the onboarding questions field.
   const [learnMoreOpen, setLearnMoreOpen] = useState(false);
+  // Active editor tab — controlled so AI-assist (button + drawer) is Settings-only.
+  const [activeTab, setActiveTab] = useState<string | null>("settings");
   const [publishOpen, setPublishOpen] = useState(false);
   const [unpublishOpen, setUnpublishOpen] = useState(false);
   const [autoOffOpen, setAutoOffOpen] = useState(false);
@@ -190,6 +192,7 @@ export function AgentEditor({
       ...d,
       name: ai.name ?? d.name,
       description: ai.description ?? d.description,
+      greeting: ai.greeting ?? d.greeting,
       instructions: ai.instructions ?? d.instructions,
       toolIds: ai.toolIds && ai.toolIds.length ? ai.toolIds : d.toolIds,
       // Keep the scheduling question seeded even when the AI replaces the set.
@@ -341,7 +344,15 @@ export function AgentEditor({
 
   return (
     <Box>
-      <Tabs defaultValue="settings" variant="pills">
+      <Tabs
+        value={activeTab}
+        onChange={(v) => {
+          setActiveTab(v);
+          // AI-assist is Settings-only: close the drawer when leaving Settings.
+          if (v !== "settings" && drawer.isOpen) drawer.close();
+        }}
+        variant="pills"
+      >
       {/* Editor header — tabs centred within it */}
       <Group
         justify="space-between"
@@ -434,7 +445,7 @@ export function AgentEditor({
 
       {/* Build-with-AI toggle — sticks just below the header, anchored to the
           editor column's right edge so it follows the header on scroll and moves
-          inward (never covering the drawer) when AI assist is open. */}
+          inward (never covering the drawer) when AI assist is open. Settings-only. */}
       <Box
         px="md"
         style={{
@@ -442,7 +453,7 @@ export function AgentEditor({
           top: 64,
           zIndex: 150,
           height: 0,
-          display: "flex",
+          display: activeTab === "settings" ? "flex" : "none",
           justifyContent: "flex-end",
           pointerEvents: "none",
         }}
@@ -668,6 +679,8 @@ export function AgentEditor({
               instructions={draft.instructions}
               greeting={draft.greeting}
               questions={draft.questions}
+              iconName={draft.iconName}
+              bgColor={draft.bgColor}
             />
           </Tabs.Panel>
       </Container>

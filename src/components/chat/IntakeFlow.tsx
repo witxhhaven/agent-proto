@@ -86,7 +86,7 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
       const recap = answered
         .map(
           (a) =>
-            `• ${a.prompt} — ${[...a.selectedOptionLabels, a.freeText]
+            `- **${a.prompt}** — ${[...a.selectedOptionLabels, a.freeText]
               .filter(Boolean)
               .join(", ")}`
         )
@@ -106,7 +106,7 @@ export function IntakeFlow({ agent, chat }: { agent: Agent; chat: Chat }) {
       // 1. acknowledgment + recap of what they told us
       appendAssistant(
         recap
-          ? `Got it, thanks for those details. Here's what I've noted:\n${recap}`
+          ? `Got it, thanks for those details. Here's what I've noted:\n\n${recap}`
           : "Got it, thanks for those details."
       );
 
