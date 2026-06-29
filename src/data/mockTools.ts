@@ -15,6 +15,8 @@ export const mockTools: McpTool[] = [
   { id: "m_outlook_search", name: "Outlook — Search inbox", provider: "Microsoft 365", providerBrand: "microsoft", category: "Email", description: "Search the Outlook inbox and read messages." },
   { id: "m_teams_post", name: "Microsoft Teams — Post message", provider: "Microsoft 365", providerBrand: "microsoft", category: "Chat", description: "Post a message to a Teams channel or chat." },
   { id: "m_onedrive_search", name: "OneDrive — Search files", provider: "Microsoft 365", providerBrand: "microsoft", category: "Files", description: "Find files and folders stored in OneDrive." },
+  { id: "m_onedrive_read", name: "OneDrive — Read document", provider: "Microsoft 365", providerBrand: "microsoft", category: "Files", description: "Open and read the contents of a OneDrive document." },
+  { id: "m_word_create", name: "Word — Create document", provider: "Microsoft 365", providerBrand: "microsoft", category: "Files", description: "Create a new Word document with formatted content." },
   { id: "m_excel_append", name: "Excel — Append row", provider: "Microsoft 365", providerBrand: "microsoft", category: "Data", description: "Add a new row of data to an Excel workbook." },
   { id: "m_sharepoint", name: "SharePoint — Search site", provider: "Microsoft 365", providerBrand: "microsoft", category: "Files", description: "Search a SharePoint site for documents and pages." },
   { id: "m_cal_create", name: "Microsoft Calendar — Create event", provider: "Microsoft 365", providerBrand: "microsoft", category: "Calendar", description: "Create Outlook calendar events with guests and times." },

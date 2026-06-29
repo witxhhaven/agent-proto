@@ -382,6 +382,45 @@ export async function synthesizeScheduleInstruction(
 }
 
 // ---------------------------------------------------------------------------
+// 2d. describeAccountStep — contextual wording for a tool account question
+// ---------------------------------------------------------------------------
+/**
+ * Write ONE short, contextual question asking which email account / cloud drive
+ * an agent should use, grounded in the agent's purpose. Mock-first: a templated
+ * question when no API key is present.
+ */
+export async function describeAccountStep(
+  agent: { name: string; description: string; instructions: string },
+  kind: "email" | "drive"
+): Promise<string> {
+  const who = agent.name?.trim() || "this agent";
+  const mock = () =>
+    kind === "email"
+      ? `Which email account should ${who} use?`
+      : `Which cloud drive and folder should ${who} use?`;
+
+  const noun = kind === "email" ? "email account" : "cloud drive and folder";
+  try {
+    const res = await callLlm({
+      mode: "text",
+      system: `You write ONE short question (max ~22 words, plain text, no quotes or preamble) asking which ${noun} an AI agent should use. Use the agent's purpose to add brief, concrete context for why it needs ${kind === "email" ? "an email account" : "a drive and folder"}. End with a question mark.`,
+      messages: [
+        {
+          role: "user",
+          content: `Agent: ${agent.name}\nPurpose: ${agent.description}\nInstructions: ${
+            agent.instructions || "(none)"
+          }\n\nWrite the question.`,
+        },
+      ],
+    });
+    if (res.mock || !res.text) return mock();
+    return res.text.trim();
+  } catch {
+    return mock();
+  }
+}
+
+// ---------------------------------------------------------------------------
 // 3. extractSchedule — chat + schedule AI-assist
 // ---------------------------------------------------------------------------
 const ExtractScheduleSchema = z.object({

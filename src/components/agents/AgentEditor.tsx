@@ -49,6 +49,7 @@ import { QuestionsEditor } from "./QuestionsEditor";
 import { AgentInstructionsInput } from "./AgentInstructionsInput";
 import { AgentTestChat } from "./AgentTestChat";
 import { AiAssistDrawer } from "./AiAssistDrawer";
+import { syncToolStepQuestions } from "@/lib/toolSteps";
 import tabClasses from "@/app/agents/segmented-tabs.module.css";
 import type { AgentDraft } from "@/lib/agentDraft";
 import { withSchedulingQuestion } from "@/data/onboarding";
@@ -195,9 +196,12 @@ export function AgentEditor({
       greeting: ai.greeting ?? d.greeting,
       instructions: ai.instructions ?? d.instructions,
       toolIds: ai.toolIds && ai.toolIds.length ? ai.toolIds : d.toolIds,
-      // Keep the scheduling question seeded even when the AI replaces the set.
+      // Keep the scheduling question seeded, and preserve the tool-linked pills,
+      // even when the AI replaces the text questions.
       questions: withSchedulingQuestion(
-        ai.questions && ai.questions.length ? ai.questions : d.questions
+        ai.questions && ai.questions.length
+          ? [...d.questions.filter((q) => q.toolStep), ...ai.questions]
+          : d.questions
       ),
     }));
   }
@@ -214,6 +218,16 @@ export function AgentEditor({
       { title: "AI Agent Builder" }
     );
   }
+
+  // Keep the email/drive account-step pills in the questions list in sync with
+  // the selected tools: add a pill (at the start) when an Email/Drive tool is
+  // present, remove it when its tool is deselected.
+  useEffect(() => {
+    setDraft((d) => {
+      const synced = syncToolStepQuestions(d.questions, d.toolIds);
+      return synced === d.questions ? d : { ...d, questions: synced };
+    });
+  }, [draft.toolIds]);
 
   // Keep the confetti spraying for as long as the success modal is open; the
   // cleanup stops it when the modal closes (successKind → null) or on unmount.
@@ -246,7 +260,7 @@ export function AgentEditor({
       instructions: draft.instructions,
       knowledgeBase: draft.knowledgeBase,
       toolIds: draft.toolIds,
-      questions: draft.questions.filter((q) => q.prompt.trim()),
+      questions: draft.questions.filter((q) => q.toolStep || q.prompt.trim()),
       enabled: draft.enabled,
       published: draft.published,
     };
@@ -666,6 +680,7 @@ export function AgentEditor({
               >
                 <QuestionsEditor
                   questions={draft.questions}
+                  toolIds={draft.toolIds}
                   onChange={(questions) => patch({ questions })}
                 />
               </Field>
@@ -681,6 +696,7 @@ export function AgentEditor({
               questions={draft.questions}
               iconName={draft.iconName}
               bgColor={draft.bgColor}
+              toolIds={draft.toolIds}
             />
           </Tabs.Panel>
       </Container>

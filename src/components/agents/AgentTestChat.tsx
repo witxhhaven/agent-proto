@@ -24,8 +24,11 @@ import { LoadingState } from "@/components/common/LoadingState";
 import { Composer } from "@/components/chat/Composer";
 import { Markdown } from "@/components/chat/Markdown";
 import { IntakeQuestionCard } from "@/components/chat/IntakeQuestionCard";
+import { ToolAccountCard } from "@/components/chat/ToolAccountCard";
 import { renderSchedulingQuestion } from "@/components/chat/IntakeFlow";
 import { ScheduleCard } from "@/components/scheduled/ScheduleCard";
+import type { ToolStepKind } from "@/types";
+import type { ToolStepResult } from "@/components/chat/ToolAccountCard";
 
 interface LocalMsg {
   id: string;
@@ -43,6 +46,13 @@ type Status =
   | "error"
   | "complete";
 
+// Back-stack entry: either an answered MCQ or a completed tool step, so Back can
+// restore whichever came before.
+type ToolStepRef = { id: string; kind: ToolStepKind; prompt: string };
+type HistItem =
+  | { kind: "q"; q: RenderedQuestion }
+  | { kind: "tool"; step: ToolStepRef };
+
 export interface AgentTestChatProps {
   name: string;
   description: string;
@@ -52,6 +62,8 @@ export interface AgentTestChatProps {
   /** Avatar bits so the test schedule can show the agent @mention chip. */
   iconName: string;
   bgColor: string;
+  /** Selected tools — so account cards show only the relevant accounts. */
+  toolIds: string[];
 }
 
 /**
@@ -67,9 +79,12 @@ export function AgentTestChat({
   questions,
   iconName,
   bgColor,
+  toolIds,
 }: AgentTestChatProps) {
+  // Intake items, in order: real questions plus the account-step pill entries
+  // (kept by id even though they have no prompt text).
   const intake = useMemo(
-    () => questions.filter((q) => q.prompt.trim()),
+    () => questions.filter((q) => q.prompt.trim() || q.toolStep),
     [questions]
   );
 
@@ -83,8 +98,14 @@ export function AgentTestChat({
   const [sourceIndex, setSourceIndex] = useState(0);
   const [queue, setQueue] = useState<RenderedQuestion[]>([]);
   const [current, setCurrent] = useState<RenderedQuestion | null>(null);
+  // When set, the current intake item is a tool-linked step (rendered as a card).
+  const [currentToolStep, setCurrentToolStep] = useState<{
+    id: string;
+    kind: ToolStepKind;
+    prompt: string;
+  } | null>(null);
   const [answers, setAnswers] = useState<IntakeAnswer[]>([]);
-  const [history, setHistory] = useState<RenderedQuestion[]>([]);
+  const [history, setHistory] = useState<HistItem[]>([]);
   const [messages, setMessages] = useState<LocalMsg[]>(initialMessages);
   const [status, setStatus] = useState<Status>(
     intake.length > 0 ? "idle" : "complete"
@@ -146,6 +167,7 @@ export function AgentTestChat({
     setSourceIndex(0);
     setQueue([]);
     setCurrent(null);
+    setCurrentToolStep(null);
     setAnswers([]);
     setHistory([]);
     setMessages(initialMessages());
@@ -154,6 +176,67 @@ export function AgentTestChat({
     setSpacerH(0);
     setPinnedId(null);
     setStatus(intake.length > 0 ? "idle" : "complete");
+  }
+
+  // Record a completed tool-linked step (rendered inline at its position) and
+  // continue the intake.
+  function submitToolStep(result: ToolStepResult) {
+    if (!currentToolStep) return;
+    const labels = [
+      result.account,
+      ...(result.keywords ?? []),
+      ...(result.recipients ?? []),
+      ...(result.folder ? [result.folder] : []),
+    ];
+    setHistory((h) => [...h, { kind: "tool", step: currentToolStep }]);
+    setAnswers((a) => [
+      ...a,
+      {
+        questionId: currentToolStep.id,
+        prompt: currentToolStep.prompt,
+        selectedOptionLabels: labels,
+      },
+    ]);
+    setCurrentToolStep(null);
+    setStatus("idle");
+  }
+
+  // Skip the current tool step (record it skipped) and continue.
+  function handleToolSkip() {
+    if (!currentToolStep) return;
+    setHistory((h) => [...h, { kind: "tool", step: currentToolStep }]);
+    setAnswers((a) => [
+      ...a,
+      {
+        questionId: currentToolStep.id,
+        prompt: currentToolStep.prompt,
+        selectedOptionLabels: [],
+        skipped: true,
+      },
+    ]);
+    setCurrentToolStep(null);
+    setStatus("idle");
+  }
+
+  // Skip this tool step and everything remaining, then go to the result.
+  function handleToolSkipAll() {
+    if (!currentToolStep) return;
+    const skip = (q: { id: string; prompt: string }): IntakeAnswer => ({
+      questionId: q.id,
+      prompt: q.prompt,
+      selectedOptionLabels: [],
+      skipped: true,
+    });
+    const finalAnswers = [
+      ...answers,
+      skip(currentToolStep),
+      ...queue.map(skip),
+      ...intake.slice(sourceIndex).map(skip),
+    ];
+    setCurrentToolStep(null);
+    setQueue([]);
+    setAnswers(finalAnswers);
+    void finish(finalAnswers);
   }
 
   // After the last answer: acknowledge with a recap, then stream a result —
@@ -300,9 +383,22 @@ export function AgentTestChat({
       void finish(answers);
       return;
     }
+    const source = intake[sourceIndex];
+    // Tool-linked pill entries render an inline ToolAccountCard at their spot.
+    if (source.toolStep) {
+      setSourceIndex((i) => i + 1);
+      setQueue([]);
+      setCurrentToolStep({
+        id: source.id,
+        kind: source.toolStep,
+        prompt: source.prompt,
+      });
+      setStatus("answering");
+      return;
+    }
     // The scheduling question renders with concrete, parseable options (same as
     // the real chat), so it always appears and a single pick creates a schedule.
-    if (intake[sourceIndex].id === SCHEDULING_QUESTION_ID) {
+    if (source.id === SCHEDULING_QUESTION_ID) {
       setSourceIndex((i) => i + 1);
       setQueue([]);
       setCurrent(renderSchedulingQuestion());
@@ -311,7 +407,7 @@ export function AgentTestChat({
     }
     setStatus("generating");
     try {
-      const rendered = await renderQuestion(intake[sourceIndex], {
+      const rendered = await renderQuestion(source, {
         agentName: name,
         agentDescription: description,
         priorAnswers: answers,
@@ -335,7 +431,7 @@ export function AgentTestChat({
   function handleAnswer(answer: IntakeAnswer) {
     // Like the real chat, answering does NOT add a user bubble — the cards flow
     // one at a time and the recap appears when intake finishes.
-    if (current) setHistory((h) => [...h, current]);
+    if (current) setHistory((h) => [...h, { kind: "q", q: current }]);
     setAnswers((a) => [...a, answer]);
     setCurrent(null);
     setStatus("idle");
@@ -377,8 +473,17 @@ export function AgentTestChat({
     if (!prev) return;
     setHistory((h) => h.slice(0, -1));
     setAnswers((a) => a.slice(0, -1));
-    setQueue((q) => (current ? [current, ...q] : q));
-    setCurrent(prev);
+    // Stash whatever is currently shown so it reappears after: questions go back
+    // on the queue; tool steps are re-shown by re-pointing at their pill.
+    if (current) setQueue((q) => [current, ...q]);
+    else if (currentToolStep) setSourceIndex((s) => s - 1);
+    if (prev.kind === "q") {
+      setCurrent(prev.q);
+      setCurrentToolStep(null);
+    } else {
+      setCurrentToolStep(prev.step);
+      setCurrent(null);
+    }
     setStatus("answering");
   }
 
@@ -523,9 +628,25 @@ export function AgentTestChat({
           )}
 
           {(status === "generating" || status === "idle") &&
-            intake.length > 0 && (
+            intake.length > 0 &&
+            !currentToolStep && (
               <LoadingState title="Preparing your questions…" />
             )}
+
+          {/* Tool-linked step rendered inline at its position in the sequence. */}
+          {currentToolStep && (
+            <ToolAccountCard
+              key={currentToolStep.id}
+              kind={currentToolStep.kind}
+              prompt={currentToolStep.prompt}
+              toolIds={toolIds}
+              onComplete={submitToolStep}
+              onSkip={handleToolSkip}
+              onSkipAll={handleToolSkipAll}
+              onBack={handleBack}
+              canGoBack={history.length > 0}
+            />
+          )}
 
           {status === "error" && (
             <Stack gap="sm" maw={560}>

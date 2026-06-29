@@ -19,7 +19,7 @@ function draftFromTemplate(t: AgentTemplate): AgentDraftState {
     description: t.shortDescription,
     iconName: t.iconName,
     bgColor: t.bgColor,
-    greeting: "",
+    greeting: t.defaultGreeting ?? "",
     responseSpeed: "balanced",
     instructions: t.defaultInstructions,
     knowledgeBase: { sources: t.defaultKnowledge?.sources ?? [] },

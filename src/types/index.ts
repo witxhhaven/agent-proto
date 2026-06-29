@@ -96,6 +96,7 @@ export interface AgentTemplate {
   iconName: string;
   bgColor: string;
   defaultInstructions: string;
+  defaultGreeting?: string; // agent's first chat message; leads into the intake
   defaultToolIds: string[]; // McpTool ids
   defaultQuestions: string[]; // raw question strings
   defaultKnowledge?: Partial<KnowledgeBase>;
@@ -134,11 +135,21 @@ export interface AssistMessage {
 // ====================================================================
 // Intake questions (the AI centerpiece) — unchanged shapes
 // ====================================================================
+/** Tool-linked intake question kinds (driven by the agent's selected tools). */
+export type ToolStepKind =
+  | "keyword"
+  | "recipients"
+  | "drive_read"
+  | "drive_save";
+
 export interface IntakeQuestion {
   id: string;
   prompt: string;
   helpText?: string;
   allowMultiple?: boolean;
+  /** When set, this question is a tool-linked "pill": it renders a special card
+   * at chat time (account picker + config) instead of an MCQ. */
+  toolStep?: ToolStepKind;
 }
 
 /** LLM-generated, UI-renderable form of a question (the "text -> render format" output). */

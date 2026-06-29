@@ -12,6 +12,8 @@ export const agentTemplates: AgentTemplate[] = [
     bgColor: "#4F46E5",
     defaultInstructions:
       "You answer staff questions using only the provided knowledge base. Cite the source for each answer, and say clearly when something is not covered rather than guessing.",
+    defaultGreeting:
+      "Hi! I'm your Q&A assistant — I answer staff questions from your approved policies and SOPs, with sources. To point me at the right material, please answer a couple of quick questions below.",
     defaultToolIds: ["g_drive_search", "g_drive_read"],
     defaultQuestions: [
       "Which knowledge sources should answers draw from?",
@@ -39,6 +41,8 @@ export const agentTemplates: AgentTemplate[] = [
     bgColor: "#0EA5E9",
     defaultInstructions:
       "You write meeting minutes. Capture attendees, key decisions, and action items with owners. Keep it concise and neutral; flag anything that needs follow-up.",
+    defaultGreeting:
+      "Hi! I turn your meeting notes or transcripts into clear, shareable minutes — with decisions and action items. To match your format and audience, please answer a couple of quick questions below.",
     defaultToolIds: ["g_docs_create"],
     defaultQuestions: [
       "What format should the minutes follow?",
@@ -55,6 +59,8 @@ export const agentTemplates: AgentTemplate[] = [
     bgColor: "#2563EB",
     defaultInstructions:
       "You draft email replies. Match the requested tone, keep replies concise, and always end with a clear next step. Ask for clarification if the incoming email is ambiguous.",
+    defaultGreeting:
+      "Hi! I draft replies to incoming emails in your tone. To get the voice and audience right, please answer a couple of quick questions below.",
     defaultToolIds: ["g_gmail_send", "g_gmail_search"],
     defaultQuestions: [
       "What tone should replies use?",
@@ -88,6 +94,8 @@ export const agentTemplates: AgentTemplate[] = [
     bgColor: "#9333EA",
     defaultInstructions:
       "You summarise long documents. Lead with a 2-3 sentence executive summary, then bullet the key points and any decisions or risks. Preserve figures and dates accurately.",
+    defaultGreeting:
+      "Hi! I condense long reports, circulars, and papers into key points and a short executive summary. To tailor the length and focus, please answer a couple of quick questions below.",
     defaultToolIds: ["g_drive_search", "g_drive_read"],
     defaultQuestions: [
       "How long should the summary be?",
@@ -152,6 +160,16 @@ export const seedAgents: Agent[] = [
         helpText: "e.g. grants, licensing, appeals, general feedback.",
         allowMultiple: true,
       },
+      {
+        id: "q_ce_keywords",
+        prompt: "What kinds of enquiry emails should I look for?",
+        toolStep: "keyword",
+      },
+      {
+        id: "q_ce_recipients",
+        prompt: "Who should replies be sent to?",
+        toolStep: "recipients",
+      },
     ],
     enabled: true,
     createdAt: "2026-05-01T09:00:00.000Z",
@@ -186,7 +204,7 @@ export const seedAgents: Agent[] = [
         },
       ],
     },
-    toolIds: ["g_drive_search", "g_drive_read", "g_docs_create"],
+    toolIds: ["g_gmail_send", "g_gmail_search", "m_outlook_send", "m_outlook_search"],
     questions: [
       {
         id: "q_focus",
@@ -197,6 +215,16 @@ export const seedAgents: Agent[] = [
         id: "q_depth",
         prompt: "How deep should each section go?",
         helpText: "Headline-only, standard, or deep-dive.",
+      },
+      {
+        id: "q_mp_keywords",
+        prompt: "What kinds of market emails should I look for?",
+        toolStep: "keyword",
+      },
+      {
+        id: "q_mp_recipients",
+        prompt: "Who should I send the digest to?",
+        toolStep: "recipients",
       },
     ],
     enabled: false,
