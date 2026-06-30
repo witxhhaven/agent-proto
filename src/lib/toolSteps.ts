@@ -80,9 +80,9 @@ export function linkedToolNames(kind: ToolStepKind, toolIds: string[]): string[]
 export function defaultPromptForKind(kind: ToolStepKind): string {
   switch (kind) {
     case "keyword":
-      return "What kinds of emails should I look for?";
+      return "Which email account should I connect, and what kinds of emails should I look for?";
     case "recipients":
-      return "Who should I send emails to?";
+      return "Which email account should I connect, and who should I send emails to?";
     case "drive_read":
       return "Which cloud drive and folder should I read from?";
     case "drive_save":
