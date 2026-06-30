@@ -4,7 +4,7 @@ import type { Agent, AgentTemplate } from "@/types";
 export const agentTemplates: AgentTemplate[] = [
   {
     id: "qa-chatbot",
-    name: "Q&A Chatbot",
+    name: "Policy QnA chatbot",
     shortDescription: "Answers staff questions from your policies and SOPs.",
     description:
       "Answers staff questions grounded in your policies, SOPs, and knowledge base, with citations.",
@@ -19,6 +19,8 @@ export const agentTemplates: AgentTemplate[] = [
       "Which knowledge sources should answers draw from?",
       "What should happen when an answer isn't in the knowledge base?",
     ],
+    // Chat-only Q&A bot — no scheduled runs, so skip the scheduling question.
+    defaultSchedulingQuestion: false,
     defaultKnowledge: {
       sources: [
         {

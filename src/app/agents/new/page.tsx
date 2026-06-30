@@ -24,12 +24,15 @@ function draftFromTemplate(t: AgentTemplate): AgentDraftState {
     instructions: t.defaultInstructions,
     knowledgeBase: { sources: t.defaultKnowledge?.sources ?? [] },
     toolIds: t.defaultToolIds,
-    questions: withSchedulingQuestion(
-      t.defaultQuestions.map((prompt) => ({
+    questions: (() => {
+      const base = t.defaultQuestions.map((prompt) => ({
         id: createId("q"),
         prompt,
-      }))
-    ),
+      }));
+      return t.defaultSchedulingQuestion === false
+        ? base
+        : withSchedulingQuestion(base);
+    })(),
     enabled: true,
     published: false,
   };

@@ -99,6 +99,9 @@ export interface AgentTemplate {
   defaultGreeting?: string; // agent's first chat message; leads into the intake
   defaultToolIds: string[]; // McpTool ids
   defaultQuestions: string[]; // raw question strings
+  // Whether to seed the "run on a schedule?" intake question. Defaults to true;
+  // set false for chat-only agents (e.g. the Policy QnA chatbot).
+  defaultSchedulingQuestion?: boolean;
   defaultKnowledge?: Partial<KnowledgeBase>;
 }
 
