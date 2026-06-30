@@ -12,7 +12,6 @@ import {
   Stack,
   Text,
   Textarea,
-  TextInput,
 } from "@mantine/core";
 import {
   IconChevronDown,
@@ -252,12 +251,15 @@ export function QuestionsEditor({
             <Badge size="sm" variant="light" color="gray" radius="sm" w="fit-content">
               {kindLabel(editing.toolStep)}
             </Badge>
-            <TextInput
+            <Textarea
               label="Question"
               value={editing.prompt}
               onChange={(e) =>
                 editIndex !== null && updatePrompt(editIndex, e.currentTarget.value)
               }
+              autosize
+              minRows={2}
+              maxRows={6}
             />
             <Stack gap={4}>
               <Text size="sm" fw={500}>
@@ -341,7 +343,12 @@ function PillRow({
           <IconChevronDown size={14} />
         </ActionIcon>
       </Group>
-      <Text size="sm" fw={500} c="brand-blue.8" lineClamp={1} style={{ flex: 1 }}>
+      <Text
+        size="sm"
+        fw={500}
+        c="brand-blue.8"
+        style={{ flex: 1, overflowWrap: "anywhere" }}
+      >
         {q.prompt.trim() || "Question"}
       </Text>
       <ActionIcon
