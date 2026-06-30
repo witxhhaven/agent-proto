@@ -45,7 +45,13 @@ export const agentTemplates: AgentTemplate[] = [
       "You write meeting minutes. Capture attendees, key decisions, and action items with owners. Keep it concise and neutral; flag anything that needs follow-up.",
     defaultGreeting:
       "Hi! I turn your meeting notes or transcripts into clear, shareable minutes — with decisions and action items. To match your format and audience, please answer a couple of quick questions below.",
-    defaultToolIds: ["g_docs_create"],
+    // Reads source docs from Drive/OneDrive and sends the minutes via Gmail/Outlook.
+    defaultToolIds: [
+      "g_gmail_send",
+      "g_drive_read",
+      "m_outlook_send",
+      "m_onedrive_read",
+    ],
     defaultQuestions: [
       "What format should the minutes follow?",
       "Who is the audience for these minutes?",
