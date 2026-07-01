@@ -42,6 +42,10 @@ export async function POST(req: Request) {
 
   const client = new Anthropic({ apiKey: key });
   const model = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
+  // TEMP diagnostics — remove once latency is understood. Shows in Vercel logs.
+  const region = process.env.VERCEL_REGION ?? "local";
+  const baseURL = process.env.ANTHROPIC_BASE_URL ?? "api.anthropic.com";
+  const t0 = Date.now();
 
   // Streaming text path — emit text deltas as they arrive.
   if (body.stream && body.mode !== "structured") {
@@ -55,14 +59,22 @@ export async function POST(req: Request) {
             system: body.system,
             messages: body.messages,
           });
+          let first = true;
           for await (const event of stream) {
             if (
               event.type === "content_block_delta" &&
               event.delta.type === "text_delta"
             ) {
+              if (first) {
+                first = false;
+                console.log(
+                  `[llm] region=${region} base=${baseURL} model=${model} TTFT=${Date.now() - t0}ms`
+                );
+              }
               controller.enqueue(encoder.encode(event.delta.text));
             }
           }
+          console.log(`[llm] region=${region} stream_total=${Date.now() - t0}ms`);
         } catch (err) {
           const message =
             err instanceof Error ? err.message : "LLM stream failed";
