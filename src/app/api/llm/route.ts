@@ -41,7 +41,7 @@ export async function POST(req: Request) {
   }
 
   const client = new Anthropic({ apiKey: key });
-  const model = process.env.ANTHROPIC_MODEL ?? "claude-sonnet-4-6";
+  const model = process.env.ANTHROPIC_MODEL ?? "bedrock.claude-haiku-4-5";
   // TEMP diagnostics — remove once latency is understood. Shows in Vercel logs.
   const region = process.env.VERCEL_REGION ?? "local";
   const baseURL = process.env.ANTHROPIC_BASE_URL ?? "api.anthropic.com";
