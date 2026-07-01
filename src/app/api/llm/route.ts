@@ -1,5 +1,12 @@
 import Anthropic from "@anthropic-ai/sdk";
 
+// The LLM proxy (api.ai.tech.gov.sg) is in Singapore. Run this function in
+// Vercel's Singapore region so requests don't cross the Pacific twice — that
+// round-trip, not the model, is what makes Haiku feel slow on the US default.
+export const preferredRegion = "sin1";
+export const runtime = "nodejs";
+export const maxDuration = 60;
+
 export interface LlmRequest {
   mode: "text" | "structured";
   system?: string;
