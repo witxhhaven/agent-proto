@@ -40,9 +40,7 @@ export async function POST(req: Request) {
     return Response.json({ mock: true });
   }
 
-  // maxRetries:0 TEMP — surface the real upstream error fast instead of the SDK
-  // silently retrying 3x (~33s) before failing. Restore default once fixed.
-  const client = new Anthropic({ apiKey: key, maxRetries: 0 });
+  const client = new Anthropic({ apiKey: key });
   const model = process.env.ANTHROPIC_MODEL ?? "bedrock.claude-haiku-4-5";
   // TEMP diagnostics — remove once latency is understood. Shows in Vercel logs.
   const region = process.env.VERCEL_REGION ?? "local";
@@ -92,34 +90,48 @@ export async function POST(req: Request) {
   }
 
   try {
+    // NOTE: use .stream().finalMessage() instead of .create() even though we
+    // only want the final result. The upstream proxy (api.ai.tech.gov.sg) has
+    // a ~10s idle timeout and drops any request that sends no bytes in time. A
+    // non-streaming create() generates the whole reply before the first byte,
+    // so slower structured/tool-use calls got killed → "Request timed out".
+    // Streaming keeps the connection alive; finalMessage() reassembles it.
     if (body.mode === "structured" && body.tool) {
-      const msg = await client.messages.create({
-        model,
-        max_tokens: body.maxTokens ?? 1024,
-        system: body.system,
-        tools: [
-          {
-            name: body.tool.name,
-            description: body.tool.description,
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            input_schema: body.tool.input_schema as any,
-          },
-        ],
-        tool_choice: { type: "tool", name: body.tool.name },
-        messages: body.messages,
-      });
+      const msg = await client.messages
+        .stream({
+          model,
+          max_tokens: body.maxTokens ?? 1024,
+          system: body.system,
+          tools: [
+            {
+              name: body.tool.name,
+              description: body.tool.description,
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              input_schema: body.tool.input_schema as any,
+            },
+          ],
+          tool_choice: { type: "tool", name: body.tool.name },
+          messages: body.messages,
+        })
+        .finalMessage();
+      console.log(
+        `[llm] region=${region} mode=structured total=${Date.now() - t0}ms`
+      );
       const block = msg.content.find((b) => b.type === "tool_use");
       return Response.json({
         data: block?.type === "tool_use" ? block.input : null,
       });
     }
 
-    const msg = await client.messages.create({
-      model,
-      max_tokens: body.maxTokens ?? 1024,
-      system: body.system,
-      messages: body.messages,
-    });
+    const msg = await client.messages
+      .stream({
+        model,
+        max_tokens: body.maxTokens ?? 1024,
+        system: body.system,
+        messages: body.messages,
+      })
+      .finalMessage();
+    console.log(`[llm] region=${region} mode=text total=${Date.now() - t0}ms`);
     const text = msg.content
       .map((b) => (b.type === "text" ? b.text : ""))
       .join("");
