@@ -40,7 +40,9 @@ export async function POST(req: Request) {
     return Response.json({ mock: true });
   }
 
-  const client = new Anthropic({ apiKey: key });
+  // maxRetries:0 TEMP — surface the real upstream error fast instead of the SDK
+  // silently retrying 3x (~33s) before failing. Restore default once fixed.
+  const client = new Anthropic({ apiKey: key, maxRetries: 0 });
   const model = process.env.ANTHROPIC_MODEL ?? "bedrock.claude-haiku-4-5";
   // TEMP diagnostics — remove once latency is understood. Shows in Vercel logs.
   const region = process.env.VERCEL_REGION ?? "local";
@@ -124,6 +126,11 @@ export async function POST(req: Request) {
     return Response.json({ text });
   } catch (err) {
     const message = err instanceof Error ? err.message : "LLM request failed";
+    // TEMP diagnostics — log the real upstream failure (status + body).
+    const status = (err as { status?: number })?.status;
+    console.error(
+      `[llm] region=${region} model=${model} mode=${body.mode} UPSTREAM_ERROR status=${status} msg=${message}`
+    );
     return Response.json({ error: message }, { status: 500 });
   }
 }
